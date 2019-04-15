@@ -256,7 +256,7 @@ function get_static_geometry() {
 }
 
 function create_temp_directory() {
-  TEMP_DIRECTORY=$(mktemp -d --suffix=_capture)
+  TEMP_DIRECTORY=$(mktemp -d)
   log "created temporary directory $TEMP_DIRECTORY" 0 true
 }
 
