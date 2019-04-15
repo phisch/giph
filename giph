@@ -15,8 +15,9 @@ SYNOPSIS
 
 DESCRIPTION
     capture is an utility that records a selected area of your desktop,
-    and converts it into a high quality animated gif file. By default
-    it outputs the animated gif image data directly to standard output.
+    and converts it into a high quality animated gif file. If [FILEPATH]
+    is omitted, the image is printed to stdout and the verbosity is set
+    to -1 (as if --quiet was set).
 
 OPTIONS
     -h, --help
@@ -25,10 +26,23 @@ OPTIONS
     -v, --version
         Print version and exit.
 
+    -v*, --verbose
+        Increases the verbosity level per v, while --verbose sets the verbosity level to 1.
+
+    -q, --quiet
+        Sets the verbosity level to -1. This will mute all output except
+        the resulting gif that is printed to stdout when no file-destination is given.
+
     -s, --select
         Enables an interactive selection mode where you can select the
         desired region or window before the recording is started. This
         uses the "SLOP OPTIONS" described below.
+
+    -i, --interface=STRING (default="terminal")
+        Defines which interface is used for countdown and stop recording.
+        "terminal": the recodring has to be stopped by either pressing ctrl+c, or
+        sending a SIGINT to this process (`killall -INT giph`).
+        "zenity": the recording can be stopped by clicking a button in a window displayed by zenity 
 
     -w, --window=INT
         Sets the desired window to capture, defaults to the root window.
@@ -51,7 +65,7 @@ OPTIONS
         A higher framerate will result in a greater filesize.
 
 SLOP OPTIONS
-    -h, --highlight
+    -l, --highlight
         Instead of outlining the selection, it will be highlighted.
         This is only useful when --color is set to a transparent color.
 
@@ -82,49 +96,58 @@ ON_IBLACK='\033[0;100m';ON_IRED='\033[0;101m';ON_IGREEN='\033[0;102m';ON_IYELLOW
 # color reset
 CR='\033[0m'
 
-# log a message - (message:string, timestamp:bool, critical:bool, stay:bool)
+# log a message - (message:string, verbosity:int, timestamp:bool, stop_execution:bool, stay_in_line:bool)
 function log() {
+  LOG_VERBOSITY=${2:-1}
+
+  if [ "$LOG_VERBOSITY" -gt "$VERBOSITY" ]; then
+    return 0
+  fi
+
   log=(echo -e)
 
-  if [ "$4" = true ]; then
+  if [ "$5" = true ]; then
     log+=(-n)
   fi
 
-  if [ "$2" = true ]; then
+  if [ "$3" = true ]; then
     log+=("${WHITE}$(date '+%Y-%m-%d %H:%M:%S'):${CR}")
   fi
 
   log+=("$1")
 
-  #${log[@]}
+  ${log[@]}
 
-  if [ "$3" = true ]; then
+  if [ "$4" = true ]; then
     exit 1;
   fi
 }
 
 function log_error() {
-  log "${BIBLACK}${ON_RED} $1 ${CR}" true true
+  log "${RED}$1${CR}" 0 true true
 }
 
 function log_warning() {
-  log "${BLACK}${ON_YELLOW} $1 ${CR}" true
+  log "${YELLOW}$1${CR}" 0 true
 }
 
 function log_success() {
-  log "${GREEN}$1${CR}" true
+  log "${GREEN}$1${CR}" 0 true
 }
 
 function log_info() {
-  log "${CYAN}$1${CR}" true
+  log "${CYAN}$1${CR}" 0 true
 }
 
+# verbosity
+VERBOSITY=0
+
 # options
-VERBOSE=0
 SLOP=0
-QUALITY=50
+QUALITY=70
 DELAY=0
 FRAMERATE=10
+INTERFACE="terminal"
 
 # slop options
 SLOP_HIGHLIGHT=0
@@ -136,10 +159,13 @@ SLOP_BORDERSIZE=0
 while [[ "$1" == -* ]]; do
   case "$1" in
   -v*)
-    (( VERBOSE += ${#1} - 1 ))
+    (( VERBOSITY += ${#1} - 1 ))
     ;;
   --verbose)
-    (( VERBOSE++ ))
+    (( VERBOSITY++ ))
+    ;;
+  --quiet)
+    VERBOSITY=-1
     ;;
   -h|--help)
     usage
@@ -163,6 +189,10 @@ while [[ "$1" == -* ]]; do
   -f|--framerate)
     shift
     FRAMERATE="$1"
+    ;;
+  -i|--interface)
+    shift
+    INTERFACE="$1"
     ;;
   -l|--highlight)
     SLOP_HIGHLIGHT=1
@@ -189,23 +219,10 @@ done
 
 # additional option handling
 if [ -n "$1" ]; then
-    OUTPUT_FILE=$1
+  OUTPUT_FILE=$1
+else
+  VERBOSITY=-1
 fi
-
-function countdown() {
-  seconds=$2
-  while [ $seconds -ge 0 ]; do
-
-    if [ $seconds -gt 0 ]; then
-      log "$1 $seconds ${CLL}" false false true
-      sleep 1
-    else
-      log "$1 $seconds"
-    fi
-    
-    : $((seconds--))
-  done
-}
 
 # launch slop to get geometry information
 function get_slop_geometry() {
@@ -215,9 +232,7 @@ function get_slop_geometry() {
       slop+=(-l)
   fi
 
-  if [ $SLOP_BORDERSIZE != 0 ]; then
-    slop+=(-b $SLOP_BORDERSIZE)
-  fi
+  slop+=(-b $SLOP_BORDERSIZE)
 
   if [ $SLOP_PADDING != 0 ]; then
     slop+=(-p $SLOP_PADDING)
@@ -240,19 +255,9 @@ function get_static_geometry() {
   printf ""
 }
 
-function log_geometry() {
-  printf "using the following geometry:\n"
-  printf "x_offset - $x_offset\n"
-  printf "y-offset - $y_offset\n"
-  printf "width - $width\n"
-  printf "height - $height\n"
-  printf "geometry string - $geometry_string\n"
-  printf "window id - $window_id\n"
-}
-
 function create_temp_directory() {
   TEMP_DIRECTORY=$(mktemp -d --suffix=_capture)
-  log "created temporary directory $TEMP_DIRECTORY" true
+  log "created temporary directory $TEMP_DIRECTORY" 0 true
 }
 
 function record() {
@@ -264,47 +269,100 @@ function record() {
   ffmpeg+=(-loglevel "quiet")
   ffmpeg+=("$TEMP_DIRECTORY/recording.webm")
 
-  # <- start test
-
-  #${ffmpeg[@]} &
-  #FFMPEG_PID=$!
-
-
-
-
-
-  #wait
-
-  #exit
-  # <- end test
-  #trap '' 2
-  trap stop_recording INT
+  #trap stop_recording INT
 
   if [ "$DELAY" -gt 0 ]; then
-    countdown "${CYAN}recording starts in:${CR} " $DELAY
+    countdown $DELAY
   fi
 
   ${ffmpeg[@]} &
-  log "started ffmpeg recording" true
-  log_info "stop recording with ${BLACK}${ON_CYAN} ctrl+c ${CR} or send INT SIGNAL to this process ${BLACK}${ON_CYAN} killall -int -g capture ${CR}"
   FFMPEG_PID=$!
+
+  log "started ffmpeg recording" 0 true
+
+  stop_recording_handler
 }
 
-function stop_recording() {
-  #log "recording stopped, waiting for ffmpeg to exit" true
+function stop_recording_handler() {
+  case "$INTERFACE" in
+    "terminal")
+      stop_recording_handler_terminal
+      ;;
+    "zenity")
+      stop_recording_handler_zenity
+      ;;
+  esac
+}
+
+function stop_recording_handler_terminal() {
+  log_info "stop recording with ${BLACK}${ON_CYAN} ctrl+c ${CR} or send INT SIGNAL to this process ${BLACK}${ON_CYAN} killall -int -g capture ${CR}" 
+  trap '' INT
   wait $FFMPEG_PID
-  log "ffmpeg exited successfully" true
-  separate_frames
-  compose_gif
+  log "stopped ffmpeg recording" 0 true
+}
+
+function stop_recording_handler_zenity() {
+  zenity --question --cancel-label "Cancel" --ok-label "Save" --text "\n<big><big>recording...</big></big>" --icon-name media-record &> /dev/null
+  zenity_return=$?
+
+  kill -INT $FFMPEG_PID
+  wait $FFMPEG_PID
+
+  if [ $zenity_return = 1 ]; then
+    log_error "recording canceled by user"
+  fi
+}
+
+function countdown() {
+  case "$INTERFACE" in
+    "terminal")
+      countdown_terminal $1
+      ;;
+    "zenity")
+      countdown_zenity $1
+      ;;
+  esac
+}
+
+function countdown_terminal() {
+  seconds=$1
+  while [ $seconds -ge 0 ]; do
+
+    if [ $seconds -gt 0 ]; then
+      log "${CYAN}recording starts in:${CR}  $seconds ${CLL}" 0 false false true
+      sleep 1
+    else
+      log "${CYAN}recording starts in:${CR}  $seconds" 0
+    fi
+    
+    : $((seconds--))
+  done
+}
+
+function countdown_zenity() {
+  countdown_time=$1
+  counter=$countdown_time
+
+  while [ "$counter" -ge "0" ]; do
+      percent=$((100-100*counter/countdown_time))
+      echo "#get ready to record"
+      echo $percent
+      ((counter-=1))
+      sleep 1
+  done | zenity --progress --time-remaining $countdown_time --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
+
+  if [ $? = 1 ]; then
+    log_error "recording canceled by user"
+  fi
 }
 
 function separate_frames() {
-  log "separating video frames into individual images" true
+  log "separating video frames into individual images" 0 true
   ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.webm" "$TEMP_DIRECTORY/frame%04d.png"
 }
 
 function compose_gif() {
-  log "composing final gif from separated frames" true
+  log "composing final gif from separated frames" 0 true
 
   gifski=(gifski --quiet)
   gifski+=(--quality $QUALITY)
@@ -328,7 +386,7 @@ function compose_gif() {
 
 function start_capture() {
   if [ $SLOP = 1 ]; then
-    log "using slop to select rectangle or window" true
+    log "using slop to select rectangle or window" 0 true
     get_slop_geometry
   else
     get_static_geometry
@@ -340,7 +398,9 @@ function start_capture() {
 
   record
 
+  separate_frames
 
+  compose_gif
 }
 
 
