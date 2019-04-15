@@ -1,7 +1,18 @@
 #!/bin/bash
 
+stty -echoctl # don't print ^C when pressing ctrl+c
+
 readonly VERSION=0.1
-stty -echoctl
+
+# verbosity
+VERBOSITY=0
+
+# options
+SLOP=0
+QUALITY=70
+DELAY=0
+FRAMERATE=10
+INTERFACE="terminal"
 
 function version() {
     printf "capture version: $VERSION \n"
@@ -11,13 +22,12 @@ function usage() {
     cat << EOF
 
 SYNOPSIS
-    capture [OPTIONS] [FILEPATH]
+    giph [OPTIONS] [FILEPATH]
 
 DESCRIPTION
-    capture is an utility that records a selected area of your desktop,
+    giph is an utility that records a selected area of your desktop,
     and converts it into a high quality animated gif file. If [FILEPATH]
-    is omitted, the image is printed to stdout and the verbosity is set
-    to -1 (as if --quiet was set).
+    is omitted, the image is printed directly to stdout.
 
 OPTIONS
     -h, --help
@@ -38,29 +48,29 @@ OPTIONS
         desired region or window before the recording is started. This
         uses the "SLOP OPTIONS" described below.
 
-    -i, --interface=STRING (default="terminal")
-        Defines which interface is used for countdown and stop recording.
-        "terminal": the recodring has to be stopped by either pressing ctrl+c, or
-        sending a SIGINT to this process (`killall -INT giph`).
-        "zenity": the recording can be stopped by clicking a button in a window displayed by zenity 
-
-    -w, --window=INT
-        Sets the desired window to capture, defaults to the root window.
-    
     -g, --geometry=GEOMETRY
         Sets the region to capture, uses local coordinates from the given window.
         So -g10x30-5+0 would represent the rectangle wxh+x+y where w=10, h=30, x=-5 and y=0.
         x and y are the upper left location of this rectangle.
     
-    -q, --quality=INT[1-100]
+    -w, --window=INT
+        Sets the desired window to capture, defaults to the root window.
+
+    -i, --interface=STRING (default="`echo $INTERFACE`")
+        Defines which interface is used for countdown and stop recording.
+        "terminal": the recodring has to be stopped by either pressing ctrl+c, or
+        sending a SIGINT to this process (\`killall -INT giph\`).
+        "zenity": the recording can be stopped by clicking a button in a window displayed by zenity    
+    
+    -q, --quality=INT[1-100] (default=`echo $QUALITY`)
         An integer from 1 to 100 that determines the final gif quality,
         where 1 is the lowest and 100 is the best quality.
     
-    -d, --delay=INT
+    -d, --delay=INT (default=`echo $DELAY`)
         Sets the time in seconds to wait before the recording starts.
         By default this prints a countdown to show how many seconds are left. 
     
-    -f, --framerate=INT (default=10)
+    -f, --framerate=INT (default=`echo $FRAMERATE`)
         Sets the desired framerate of the recorded gif.
         A higher framerate will result in a greater filesize.
 
@@ -139,22 +149,6 @@ function log_info() {
   log "${CYAN}$1${CR}" 0 true
 }
 
-# verbosity
-VERBOSITY=0
-
-# options
-SLOP=0
-QUALITY=70
-DELAY=0
-FRAMERATE=10
-INTERFACE="terminal"
-
-# slop options
-SLOP_HIGHLIGHT=0
-SLOP_COLOR=0
-SLOP_PADDING=0
-SLOP_BORDERSIZE=0
-
 # flag handling
 while [[ "$1" == -* ]]; do
   case "$1" in
@@ -223,37 +217,6 @@ if [ -n "$1" ]; then
 else
   VERBOSITY=-1
 fi
-
-# launch slop to get geometry information
-function get_slop_geometry() {
-  slop=(slop -f "%x %y %w %h %g %i")
-
-  if [ $SLOP_HIGHLIGHT = 1 ]; then
-      slop+=(-l)
-  fi
-
-  slop+=(-b $SLOP_BORDERSIZE)
-
-  if [ $SLOP_PADDING != 0 ]; then
-    slop+=(-p $SLOP_PADDING)
-  fi
-
-  if [ $SLOP_COLOR != 0 ]; then
-    slop+=(-c $SLOP_COLOR)
-  fi
-
-  slop_value=$("${slop[@]}")
-
-  if [ "$?" -eq 1 ]; then
-    log_error "slop selection got canceled"
-  fi
-
-  read -r x_offset y_offset width height geometry_string window_id <<< $slop_value
-}
-
-function get_static_geometry() {
-  printf ""
-}
 
 function create_temp_directory() {
   TEMP_DIRECTORY=$(mktemp -d)
@@ -383,26 +346,68 @@ function compose_gif() {
   fi
 }
 
-
-function start_capture() {
+function get_geometry() {
   if [ $SLOP = 1 ]; then
-    log "using slop to select rectangle or window" 0 true
-    get_slop_geometry
+    get_geometry_from_slop
+  elif [ -n "$GEOMETRY" ]; then
+    get_geometry_from_string
+  elif [ -n "$WINDOW_ID" ]; then
+    get_geometry_from_window_id
   else
-    get_static_geometry
+    get_geometry_for_desktop
   fi
-
-  #log_geometry
-
-  create_temp_directory
-
-  record
-
-  separate_frames
-
-  compose_gif
 }
 
+function get_geometry_from_slop() {
+  log "using slop to select rectangle or window" 0 true
+
+  slop=(slop -f "%x %y %w %h %g %i")
+
+  if [ -n "$SLOP_HIGHLIGHT" ]; then
+    slop+=(-l)
+  fi
+
+  if [ -n "$SLOP_BORDERSIZE" ]; then
+    slop+=(-b $SLOP_BORDERSIZE)
+  fi
+
+  if [ -n "$SLOP_PADDING" ]; then
+    slop+=(-p $SLOP_PADDING)
+  fi
+
+  if [ -n "$SLOP_COLOR" ]; then
+    slop+=(-c $SLOP_COLOR)
+  fi
+
+  slop_value=$("${slop[@]}")
+
+  if [ "$?" -eq 1 ]; then
+    log_error "slop selection got canceled"
+  fi
+
+  read -r x_offset y_offset width height geometry_string window_id <<< $slop_value
+}
+
+function get_geometry_from_string() {
+  log_error "implement getting geometry from geometry-string"
+}
+
+function get_geometry_from_window_id() {
+  log_error "implement getting geometry from window id"
+}
+
+function get_geometry_for_desktop() {
+  log_error "implement getting geometry for desktop"
+}
+
+
+function start_capture() {
+  get_geometry
+  create_temp_directory
+  record
+  separate_frames
+  compose_gif
+}
 
 start_capture
 wait
