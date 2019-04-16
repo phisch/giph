@@ -188,6 +188,14 @@ while [[ "$1" == -* ]]; do
     shift
     INTERFACE="$1"
     ;;
+  -w|--window)
+    shift
+    WINDOW="$1"
+    ;;
+  -g|--geometry)
+    shift
+    GEOMETRY="$1"
+    ;;
   -l|--highlight)
     SLOP_HIGHLIGHT=1
     ;;
@@ -228,11 +236,9 @@ function record() {
   ffmpeg+=(-f x11grab)
   ffmpeg+=(-framerate $FRAMERATE)
   ffmpeg+=(-s "$width"x"$height")
-  ffmpeg+=(-i :0.0+$x_offset,$y_offset)
+  ffmpeg+=(-i :0.0+$offset_x,$offset_y)
   ffmpeg+=(-loglevel "quiet")
   ffmpeg+=("$TEMP_DIRECTORY/recording.webm")
-
-  #trap stop_recording INT
 
   if [ "$DELAY" -gt 0 ]; then
     countdown $DELAY
@@ -351,17 +357,35 @@ function get_geometry() {
     get_geometry_from_slop
   elif [ -n "$GEOMETRY" ]; then
     get_geometry_from_string
-  elif [ -n "$WINDOW_ID" ]; then
+  elif [ -n "$WINDOW" ]; then
     get_geometry_from_window_id
   else
     get_geometry_for_desktop
   fi
+
+  log_info "Geometry string: $GEOMETRY_STRING"
+
+  parse_geometry_string
+}
+
+function parse_geometry_string() {
+  # todo: error out if this doesn't return values
+  # todo: implement using geometry relative to a parent (this is when the + and - will be important)
+  #[[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)([+-][0-9]+)([+-][0-9]+) ]] 
+  [[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)[+-]([0-9]+)[+-]([0-9]+) ]] 
+
+  width=${BASH_REMATCH[1]}
+  height=${BASH_REMATCH[2]}
+  offset_x=${BASH_REMATCH[3]}
+  offset_y=${BASH_REMATCH[4]}
+
+  log "width=$width, height=$height, offset_x=$offset_x, offset_y=$offset_y"
 }
 
 function get_geometry_from_slop() {
   log "using slop to select rectangle or window" 0 true
 
-  slop=(slop -f "%x %y %w %h %g %i")
+  slop=(slop -f "%g")
 
   if [ -n "$SLOP_HIGHLIGHT" ]; then
     slop+=(-l)
@@ -385,21 +409,26 @@ function get_geometry_from_slop() {
     log_error "slop selection got canceled"
   fi
 
-  read -r x_offset y_offset width height geometry_string window_id <<< $slop_value
+  GEOMETRY_STRING=$slop_value
 }
 
 function get_geometry_from_string() {
-  log_error "implement getting geometry from geometry-string"
+  GEOMETRY_STRING=$GEOMETRY
 }
 
 function get_geometry_from_window_id() {
-  log_error "implement getting geometry from window id"
+  xwininfo -id $WINDOW &> /dev/null
+
+  if [ $? = 1 ]; then
+    log_error "window with id $WINDOW does not exist"
+  fi
+
+  GEOMETRY_STRING="$(xwininfo -id $WINDOW | grep 'geometry' | awk '{print $2;}')"
 }
 
 function get_geometry_for_desktop() {
-  log_error "implement getting geometry for desktop"
+  GEOMETRY_STRING="$(xwininfo -root | grep 'geometry' | awk '{print $2;}')"
 }
-
 
 function start_capture() {
   get_geometry
