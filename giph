@@ -15,14 +15,14 @@ FRAMERATE=10
 INTERFACE="terminal"
 ENCODER="ffmpeg"
 
-function version() {
-    printf "capture version: $VERSION \n"
+function print_version() {
+  echo $VERSION
+  exit 0
 }
 
 # TODO: find better short names to avoid duplicates
-function usage() {
-    cat << EOF
-
+function print_help() {
+  cat << EOF
 SYNOPSIS
     giph [OPTIONS] [FILEPATH]
 
@@ -35,15 +35,15 @@ OPTIONS
     -h, --help
         Print help and exit.
 
-    -v, --version
+    --version
         Print version and exit.
 
     -v*, --verbose
         Increases the verbosity level per v, while --verbose sets the verbosity level to 1.
 
-    -q, --quiet
-        Sets the verbosity level to -1. This will mute all output except
-        the resulting gif that is printed to stdout when no file-destination is given.
+    --quiet
+        Sets the verbosity level to -1. This will mute all output except the resulting gif
+        that is printed to stdout when no file-destination is given and critical errors.
 
     -s, --select
         Enables an interactive selection mode where you can select the
@@ -66,12 +66,8 @@ OPTIONS
     
     -e, --encoder=STRING (default="`echo $ENCODER`")
         Sets the encoder used to create the final gif.
-        "ffmpeg": great quality gif images, reasonable filesize
-        "gifski": highest quality gif images, but large filesize
-
-    -q, --quality=INT[1-100] (default=`echo $QUALITY`)
-        An integer from 1 to 100 that determines the final gif quality,
-        where 1 is the lowest and 100 is the best quality.
+        "ffmpeg": High quality gif encoder.
+        "gifski": Highest quality gif encoder, but quite slow. Uses the "GIFSKI OPTIONS" described below.
     
     -d, --delay=INT (default=`echo $DELAY`)
         Sets the time in seconds to wait before the recording starts.
@@ -101,7 +97,13 @@ SLOP OPTIONS
     -b, --bordersize=FLOAT (default=1)
         Set the selection rectange's thickness.
 
+GIFSKI OPTIONS
+    -q, --quality=INT[1-100] (default=`echo $QUALITY`)
+        An integer from 1 to 100 that determines the final gif quality,
+        where 1 is the lowest and 100 is the best quality.
 EOF
+
+  exit 0
 }
 
 # clear last line
@@ -121,9 +123,7 @@ CR='\033[0m'
 
 # log a message - (message:string, verbosity:int, timestamp:bool, stop_execution:bool, stay_in_line:bool)
 function log() {
-  LOG_VERBOSITY=${2:-1}
-
-  if [ "$LOG_VERBOSITY" -gt "$VERBOSITY" ]; then
+  if [ "${2:-1}" -gt "$VERBOSITY" ]; then
     return 0
   fi
 
@@ -147,20 +147,24 @@ function log() {
 }
 
 function log_error() {
-  log "${RED}$1${CR}" 0 true true
+  log "${RED}ERROR: $1${CR}" -1 ${2:-true} true
 }
 
 function log_warning() {
-  log "${YELLOW}$1${CR}" 0 true
+  log "${YELLOW}$1${CR}" 0 ${2:-true}
 }
 
 function log_success() {
-  log "${GREEN}$1${CR}" 0 true
+  log "${GREEN}$1${CR}" 0 ${2:-true}
 }
 
 function log_info() {
-  log "${CYAN}$1${CR}" 0 true
+  log "${CYAN}$1${CR}" 0 ${2:-true}
 }
+
+if [ -z "$1" ]; then
+  print_help
+fi
 
 # flag handling
 while [[ "$1" == -* ]]; do
@@ -175,19 +179,29 @@ while [[ "$1" == -* ]]; do
     VERBOSITY=-1
     ;;
   -h|--help)
-    usage
-    exit 0
+    print_help
     ;;
   --version)
-    version
-    exit 0
+    print_version
     ;;
   -s|--select)
     SLOP=1
     ;;
-  -q|--quality)
+  -g|--geometry)
     shift
-    QUALITY="$1"
+    GEOMETRY="$1"
+    ;;
+  -w|--window)
+    shift
+    WINDOW="$1"
+    ;;
+  -i|--interface)
+    shift
+    INTERFACE="$1"
+    ;;
+  -e|--encoder)
+    shift
+    ENCODER="$1"
     ;;
   -d|--delay)
     shift
@@ -200,22 +214,6 @@ while [[ "$1" == -* ]]; do
   -f|--framerate)
     shift
     FRAMERATE="$1"
-    ;;
-  -i|--interface)
-    shift
-    INTERFACE="$1"
-    ;;
-  -e|--encoder)
-    shift
-    ENCODER="$1"
-    ;;
-  -w|--window)
-    shift
-    WINDOW="$1"
-    ;;
-  -g|--geometry)
-    shift
-    GEOMETRY="$1"
     ;;
   -l|--highlight)
     SLOP_HIGHLIGHT=1
@@ -231,6 +229,13 @@ while [[ "$1" == -* ]]; do
   -b|--bordersize)
     shift
     SLOP_BORDERSIZE="$1"
+    ;;
+  -q|--quality)
+    shift
+    QUALITY="$1"
+    ;;
+  -*)
+    log_error "option '$1' does not exist" false
     ;;
   --)
     shift
