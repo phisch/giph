@@ -13,7 +13,7 @@ QUALITY=70
 DELAY=0
 FRAMERATE=10
 INTERFACE="terminal"
-CONVERTER="ffmpeg"
+ENCODER="ffmpeg"
 
 function version() {
     printf "capture version: $VERSION \n"
@@ -64,10 +64,10 @@ OPTIONS
         sending a SIGINT to this process (\`killall -INT giph\`).
         "zenity": the recording can be stopped by clicking a button in a window displayed by zenity    
     
-    -c, --converter=STRING (default="`echo $CONVERTER`")
-        Sets the converter used to convert the video recording into the final gif.
-        "ffmpeg": low quality gif images, but low filesize
-        "gifski": high quality gif images, but large filesize
+    -e, --encoder=STRING (default="`echo $ENCODER`")
+        Sets the encoder used to create the final gif.
+        "ffmpeg": great quality gif images, reasonable filesize
+        "gifski": highest quality gif images, but large filesize
 
     -q, --quality=INT[1-100] (default=`echo $QUALITY`)
         An integer from 1 to 100 that determines the final gif quality,
@@ -205,9 +205,9 @@ while [[ "$1" == -* ]]; do
     shift
     INTERFACE="$1"
     ;;
-  -c|--converter)
+  -e|--encoder)
     shift
-    CONVERTER="$1"
+    ENCODER="$1"
     ;;
   -w|--window)
     shift
@@ -433,7 +433,7 @@ function get_geometry_for_desktop() {
 }
 
 function convert_video_to_gif() {
-  case "$CONVERTER" in
+  case "$ENCODER" in
     "ffmpeg")
       convert_video_to_gif_ffmpeg
       ;;
