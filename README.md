@@ -1,4 +1,14 @@
 # giph
+giph is a utility script that records a region, window or your desktop and encodes the recording into a high quality gif.
+
+## Dependencies
+ - ffmpeg
+ - grep
+ - awk
+ - slop (if `--select` is used)
+ - xwininfo (if `--window [ID]` is used)
+ - zenity (if `--interface zenity` is used)
+ - gifski (if `--encoder gifski` is used)
 
 ## Examples
 

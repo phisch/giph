@@ -451,7 +451,7 @@ function convert_video_to_gif() {
 function convert_video_to_gif_ffmpeg() {
   log "using ffmpeg to convert video to gif" 1
   ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" -vf palettegen "$TEMP_DIRECTORY/palette.png"
-  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r $FRAMERATE "$TEMP_DIRECTORY/converted.gif"
+  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r $FRAMERATE "$TEMP_DIRECTORY/encoded.gif"
 }
 
 function convert_video_to_gif_gifski() {
@@ -464,23 +464,23 @@ function convert_video_to_gif_gifski() {
   gifski=(gifski --quiet)
   gifski+=(--quality $QUALITY)
   gifski+=(--fps $FRAMERATE)
-  gifski+=(-o "$TEMP_DIRECTORY/converted.gif")
+  gifski+=(-o "$TEMP_DIRECTORY/encoded.gif")
   gifski+=($TEMP_DIRECTORY/frame*.png)
   "${gifski[@]}"
 }
 
-function start_capture() {
+function start_giph() {
   get_geometry
   create_temp_directory
   start_video_recording
   convert_video_to_gif
 
   if [ -n "$OUTPUT_FILE" ]; then
-    mv "$TEMP_DIRECTORY/converted.gif" "$OUTPUT_FILE"
+    mv "$TEMP_DIRECTORY/encoded.gif" "$OUTPUT_FILE"
   else
-    cat "$TEMP_DIRECTORY/converted.gif"
+    cat "$TEMP_DIRECTORY/encoded.gif"
   fi
 }
 
-start_capture
+start_giph
 wait
