@@ -27,9 +27,9 @@ SYNOPSIS
     giph [OPTIONS] [FILEPATH]
 
 DESCRIPTION
-    giph is an utility that records a selected area of your desktop,
-    and converts it into a high quality animated gif file. If [FILEPATH]
-    is omitted, the image is printed directly to stdout.
+    giph is a utility script that records a region, window or your desktop
+    and encodes the recording into a high quality gif. If [FILEPATH] is
+    omitted, the image is printed directly to stdout.
 
 OPTIONS
     -h, --help
