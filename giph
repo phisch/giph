@@ -13,11 +13,13 @@ QUALITY=70
 DELAY=0
 FRAMERATE=10
 INTERFACE="terminal"
+CONVERTER="ffmpeg"
 
 function version() {
     printf "capture version: $VERSION \n"
 }
 
+# TODO: find better short names to avoid duplicates
 function usage() {
     cat << EOF
 
@@ -62,6 +64,11 @@ OPTIONS
         sending a SIGINT to this process (\`killall -INT giph\`).
         "zenity": the recording can be stopped by clicking a button in a window displayed by zenity    
     
+    -c, --converter=STRING (default="`echo $CONVERTER`")
+        Sets the converter used to convert the video recording into the final gif.
+        "ffmpeg": low quality gif images, but low filesize
+        "gifski": high quality gif images, but large filesize
+
     -q, --quality=INT[1-100] (default=`echo $QUALITY`)
         An integer from 1 to 100 that determines the final gif quality,
         where 1 is the lowest and 100 is the best quality.
@@ -69,6 +76,12 @@ OPTIONS
     -d, --delay=INT (default=`echo $DELAY`)
         Sets the time in seconds to wait before the recording starts.
         By default this prints a countdown to show how many seconds are left. 
+
+    -t, --timer=TIMEDURATION
+        Sets a fixed time to record. The format is a timeduration as described in
+        the ffmpeg documentation (https://ffmpeg.org/ffmpeg-utils.html#Time-duration).
+        As an example, '10' would mean 10 seconds, '3:30' means 3 minutes and 30 seconds,
+        '1:02:03' means 1 hour, 2 minutes and 3 seconds, and '5.5' means 5.5 seconds.
     
     -f, --framerate=INT (default=`echo $FRAMERATE`)
         Sets the desired framerate of the recorded gif.
@@ -180,6 +193,10 @@ while [[ "$1" == -* ]]; do
     shift
     DELAY="$1"
     ;;
+  -t|--timer)
+    shift
+    TIMER="$1"
+    ;;
   -f|--framerate)
     shift
     FRAMERATE="$1"
@@ -187,6 +204,10 @@ while [[ "$1" == -* ]]; do
   -i|--interface)
     shift
     INTERFACE="$1"
+    ;;
+  -c|--converter)
+    shift
+    CONVERTER="$1"
     ;;
   -w|--window)
     shift
@@ -231,13 +252,18 @@ function create_temp_directory() {
   log "created temporary directory $TEMP_DIRECTORY" 0 true
 }
 
-function record() {
+function start_video_recording() {
   ffmpeg=(ffmpeg)
   ffmpeg+=(-f x11grab)
   ffmpeg+=(-framerate $FRAMERATE)
   ffmpeg+=(-s "$width"x"$height")
   ffmpeg+=(-i :0.0+$offset_x,$offset_y)
   ffmpeg+=(-loglevel "quiet")
+
+  if [ -n "$TIMER" ]; then
+    ffmpeg+=(-t $TIMER)
+  fi
+
   ffmpeg+=("$TEMP_DIRECTORY/recording.webm")
 
   if [ "$DELAY" -gt 0 ]; then
@@ -249,10 +275,10 @@ function record() {
 
   log "started ffmpeg recording" 0 true
 
-  stop_recording_handler
+  stop_video_recording_handler
 }
 
-function stop_recording_handler() {
+function stop_video_recording_handler() {
   case "$INTERFACE" in
     "terminal")
       stop_recording_handler_terminal
@@ -322,33 +348,6 @@ function countdown_zenity() {
 
   if [ $? = 1 ]; then
     log_error "recording canceled by user"
-  fi
-}
-
-function separate_frames() {
-  log "separating video frames into individual images" 0 true
-  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.webm" "$TEMP_DIRECTORY/frame%04d.png"
-}
-
-function compose_gif() {
-  log "composing final gif from separated frames" 0 true
-
-  gifski=(gifski --quiet)
-  gifski+=(--quality $QUALITY)
-  gifski+=(--fps $FRAMERATE)
-  
-  if [ -n "$OUTPUT_FILE" ]; then
-    gifski+=(-o "$OUTPUT_FILE")
-  else
-    gifski+=(-o "$TEMP_DIRECTORY/final.gif")
-  fi
-
-  gifski+=($TEMP_DIRECTORY/frame*.png)
-
-  "${gifski[@]}"
-
-  if [ -z "$OUTPUT_FILE" ]; then
-    cat "$TEMP_DIRECTORY/final.gif"
   fi
 }
 
@@ -430,12 +429,49 @@ function get_geometry_for_desktop() {
   GEOMETRY_STRING="$(xwininfo -root | grep 'geometry' | awk '{print $2;}')"
 }
 
+function convert_video_to_gif() {
+  case "$CONVERTER" in
+    "ffmpeg")
+      convert_video_to_gif_ffmpeg
+      ;;
+    "gifski")
+      convert_video_to_gif_gifski
+      ;;
+  esac
+}
+
+function convert_video_to_gif_ffmpeg() {
+  log "using ffmpeg to convert video to gif" 1
+  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.webm" -vf palettegen "$TEMP_DIRECTORY/palette.png"
+  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.webm" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r 10 "$TEMP_DIRECTORY/converted.gif"
+}
+
+function convert_video_to_gif_gifski() {
+  log "using gifski to convert video to gif" 1
+  log "separating video frames into individual images" 2 true
+  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.webm" "$TEMP_DIRECTORY/frame%04d.png"
+  
+  log "composing final gif from separated frames" 2 true
+
+  gifski=(gifski --quiet)
+  gifski+=(--quality $QUALITY)
+  gifski+=(--fps $FRAMERATE)
+  gifski+=(-o "$TEMP_DIRECTORY/converted.gif")
+  gifski+=($TEMP_DIRECTORY/frame*.png)
+  "${gifski[@]}"
+}
+
 function start_capture() {
   get_geometry
   create_temp_directory
-  record
-  separate_frames
-  compose_gif
+  start_video_recording
+  convert_video_to_gif
+
+  if [ -n "$OUTPUT_FILE" ]; then
+    mv "$TEMP_DIRECTORY/converted.gif" "$OUTPUT_FILE"
+  else
+    cat "$TEMP_DIRECTORY/converted.gif"
+  fi
 }
 
 start_capture
