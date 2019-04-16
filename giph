@@ -264,7 +264,10 @@ function start_video_recording() {
     ffmpeg+=(-t $TIMER)
   fi
 
-  ffmpeg+=("$TEMP_DIRECTORY/recording.webm")
+  ffmpeg+=(-preset ultrafast)
+  ffmpeg+=(-crf 0)
+
+  ffmpeg+=("$TEMP_DIRECTORY/recording.mkv")
 
   if [ "$DELAY" -gt 0 ]; then
     countdown $DELAY
@@ -442,14 +445,14 @@ function convert_video_to_gif() {
 
 function convert_video_to_gif_ffmpeg() {
   log "using ffmpeg to convert video to gif" 1
-  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.webm" -vf palettegen "$TEMP_DIRECTORY/palette.png"
-  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.webm" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r 10 "$TEMP_DIRECTORY/converted.gif"
+  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" -vf palettegen "$TEMP_DIRECTORY/palette.png"
+  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r $FRAMERATE "$TEMP_DIRECTORY/converted.gif"
 }
 
 function convert_video_to_gif_gifski() {
   log "using gifski to convert video to gif" 1
   log "separating video frames into individual images" 2 true
-  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.webm" "$TEMP_DIRECTORY/frame%04d.png"
+  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" "$TEMP_DIRECTORY/frame%04d.png"
   
   log "composing final gif from separated frames" 2 true
 
