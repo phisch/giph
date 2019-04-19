@@ -1,0 +1,101 @@
+.TH GIPH 1 "April 2019" "MIT License" "User Commands"
+.SH NAME
+\fBgiph\fR \- record gif from desktop, window or selection
+.SH SYNOPSIS
+\fBgiph\fR [\fIOPTIONS\fR] [\fIFILENAME\fR]
+.br
+\fBgiph\fR
+[\fB-g\fR \fIGEOMETRY\fR |
+\fB-w\fR \fIINT\fR |
+\fB-s\fR [\fB-l\fR] [\fB-c\fR \fIFLOAT,FLOAT,FLOAT,FLOAT\fR] [\fB-p\fR \fIFLOAT\fR] [\fB-b\fR \fIFLOAT\fR]]
+[\fB-i\fR \fIINTERFACE\fR]
+[\fB-e\fR \fIENCODER\fR [=\fIgifski\fR \fB-q\fR \fIINT\fR]]
+[\fB-d\fR \fIINT\fR]
+[\fB-t\fR \fIINT\fR]
+[\fB-f\fR \fIINT\fR]
+[\fIFILENAME\fR]
+.SH DESCRIPTION
+\fBgiph\fR is a screen recorder that records the desktop, a window or selection and encodes it into a gif file. It prints the encoded gif directly to standard output when omitting [\fIFILENAME\fR].
+.SH EXAMPLES
+
+.TP
+\fBgiph -g \fI300x200+600+200 ~/Videos/$(date +%s).png\fR
+Records a 300x200 pixel (width x height) rectangle, that is shifted 600 pixel to the right and 200 pixel down from the top-left corner.
+The recording stops when either \fBctrl+c\fR is pressed, or the \fBprocess group is interrupted\fR. The encoded gif will be saved in your users Videos directory and has the current timestamp as a name.
+To send an interrupt signal to the process group, you can use:
+.in +2
+\(bu \fBkill -INT -\fIPID\fR
+.br
+\(bu \fBkillall -INT -g \fIgiph\fR
+
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Print help and exit.
+.TP
+.BR \-\-version
+Print version and exit.
+.TP
+.BR \-v* ", " \-\-verbose ", " \-\-quiet
+Defines how verbose giph will be. Omitting [\fIFILENAME\fR] will overwrite the verbosity to \fI-1\fR (quiet).  Use the following list to determine which option to use for each verbosity level:
+.in +2
+\(bu \fI-1\fR (quiet) \fB--quiet\fR - logs errors
+.br
+\(bu  \fI0\fR (normal) - like quiet, also displays interactive components
+.br
+\(bu  \fI1\fR (verbose) \fB-v\fR, \fB--verbose\fR - like normal, also logs basic information about steps
+.br
+\(bu  \fI2\fR (very_verbose) \fB-vv\fR - like verbose, also logs detailed information about steps
+.br
+\(bu  \fI3\fR (debug) \sp2 \fB-vvv\fR - like very_verbose, also shows output of background processes
+.TP
+.BR \-s ", " \-\-select
+Uses slop to interactively select the desired region or window to record. This uses the \fBSLOP OPTIONS\fR described below.
+.TP
+.BR \-g ", " \-\-geometry " " \fIGEOMETRY\fR
+Sets the region to capture.
+.TP
+.BR \-w ", " \-\-window " " \fIINT\fR
+Sets the window id of the desired window to capture.
+.TP
+.BR \-i ", " \-\-interface " \fISTRING\fR \fR(default: \fIcli\fR)"
+Selects the user interface method that is used for countdown, timer and to stop the recording.
+The possible values are:
+.in +2
+\(bu \fIcli\fR: uses the terminal as a user interface
+.br
+\(bu \fIzenity\fR: displays control-windows using zenity
+.TP
+.BR \-e ", " \-\-encoder " \fISTRING\fR \fR(default: \fIffmpeg\fR)"
+Selects one of the following encoders uses to encode the gif:
+.in +2
+\(bu \fIffmpeg\fR: high quality gif encoder
+.br
+\(bu \fIgifski\fR: highest quality gif encoder, rather slow, uses \fBGIFSKI OPTIONS\fR described below
+.TP
+.BR \-d ", " \-\-delay " " \fIINT\fR
+Sets the time in seconds to wait before the recording starts.
+.TP
+.BR \-t ", " \-\-timer " " \fITIMEDURATION\fR
+Sets a fixed time to record. The format is a timeduration as described in the ffmpeg documentation (https://ffmpeg.org/ffmpeg-utils.html#Time-duration).
+As an example, '10' would mean 10 seconds, '3:30' means 3 minutes and 30 seconds, '1:02:03' means 1 hour, 2 minutes and 3 seconds, and '5.5' means 5.5 seconds.
+.TP
+.BR \-f ", " \-\-framerate " " \fIINT\fR
+Sets the desired framerate of the recorded gif. A higher framerate will result in a larger filesize.
+.SH SLOP OPTIONS
+.TP
+.BR \-l ", " \-\-highlight
+Instead of outlining the selection, it will be highlighted. This is only useful when --color is set to a transparent color.
+.TP
+.BR \-c ", " \-\-color " " \fIFLOAT,FLOAT,FLOAT,FLOAT\fR
+Set a color for the selection. Supports RGB or RGBA values.
+.TP
+.BR \-p ", " \-\-padding " " \fIFLOAT\fR
+Set the padding size of the selection. Can be negative.
+.TP
+.BR \-b ", " \-\-bordersize " " \fIFLOAT\fR
+Set the selection rectange's thickness.
+.SH GIFSKI OPTIONS
+.TP
+.BR \-q ", " \-\-quality " " \fIINT\fR
+An integer from 1 to 100 that determines the final gif quality, where 1 is the lowest and 100 is the best quality.
