@@ -390,7 +390,7 @@ function parse_geometry_string() {
 }
 
 function get_geometry_from_slop() {
-  log "using slop to select rectangle or window" 0 true
+  log "using slop to determine recording geometry" 1 true
 
   slop=(slop -f "%g")
 
@@ -410,7 +410,14 @@ function get_geometry_from_slop() {
     slop+=(-c $SLOP_COLOR)
   fi
 
-  slop_value=$("${slop[@]}")
+  if [ "$VERBOSITY" -lt "3" ]; then
+    slop+=(-q)
+  fi
+
+  slop_command=${slop[@]}
+  log "slop command: '$slop_command'" 2 true
+
+  slop_value=$($slop_command)
 
   if [ "$?" -eq 1 ]; then
     log_error "slop selection got canceled"
