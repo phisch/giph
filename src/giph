@@ -462,43 +462,65 @@ function get_geometry_for_desktop() {
   GEOMETRY_STRING="$(xwininfo -root | grep 'geometry' | awk '{print $2;}')"
 }
 
-function convert_video_to_gif() {
+function encode_gif() {
+  log "encoding gif" 1 true
   case "$ENCODER" in
     "ffmpeg")
-      convert_video_to_gif_ffmpeg
+      encode_gif_ffmpeg
       ;;
     "gifski")
-      convert_video_to_gif_gifski
+      encode_gif_gifski
       ;;
   esac
 }
 
-function convert_video_to_gif_ffmpeg() {
-  log "using ffmpeg to convert video to gif" 1
+function encode_gif_ffmpeg() {
+  log "using ffmpeg encoder" 2 true
+
+  log "generating color palette from recording" 2 true
   ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" -vf palettegen "$TEMP_DIRECTORY/palette.png"
+  
+  if [ $? = 1 ]; then
+    log_error "could not generate color palette from video"
+  fi
+
+  log "encoding gif using recorded video and generated palette" 2 true
   ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r $FRAMERATE "$TEMP_DIRECTORY/encoded.gif"
+
+  if [ $? = 1 ]; then
+    log_error "could not encode gif from video and color palette"
+  fi
 }
 
-function convert_video_to_gif_gifski() {
-  log "using gifski to convert video to gif" 1
+function encode_gif_gifski() {
+  log "using gifski encoder" 2 true
+
   log "separating video frames into individual images" 2 true
   ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" "$TEMP_DIRECTORY/frame%04d.png"
-  
-  log "composing final gif from separated frames" 2 true
+
+  if [ $? = 1 ]; then
+    log_error "could not separate video frames into individual images"
+  fi
 
   gifski=(gifski --quiet)
   gifski+=(--quality $QUALITY)
   gifski+=(--fps $FRAMERATE)
   gifski+=(-o "$TEMP_DIRECTORY/encoded.gif")
   gifski+=($TEMP_DIRECTORY/frame*.png)
+
+  log "encoding gif using separated frames" 2 true
   "${gifski[@]}"
+
+  if [ $? = 1 ]; then
+    log_error "could not encode gif using separated frames"
+  fi
 }
 
 function start_giph() {
   get_geometry
   create_temp_directory
   start_video_recording
-  convert_video_to_gif
+  encode_gif
 
   if [ -n "$OUTPUT_FILE" ]; then
     mv "$TEMP_DIRECTORY/encoded.gif" "$OUTPUT_FILE"
