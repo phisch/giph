@@ -427,10 +427,12 @@ function get_geometry_from_slop() {
 }
 
 function get_geometry_from_string() {
+  log "using provided geometry" 1 true
   GEOMETRY_STRING=$GEOMETRY
 }
 
 function get_geometry_from_window_id() {
+  log "determining geometry from provided window id" 1 true
   xwininfo -id $WINDOW &> /dev/null
 
   if [ $? = 1 ]; then
@@ -441,6 +443,7 @@ function get_geometry_from_window_id() {
 }
 
 function get_geometry_for_desktop() {
+  log "determining desktop geometry" 1 true
   GEOMETRY_STRING="$(xwininfo -root | grep 'geometry' | awk '{print $2;}')"
 }
 
