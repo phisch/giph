@@ -254,7 +254,10 @@ fi
 
 function create_temp_directory() {
   TEMP_DIRECTORY=$(mktemp -d)
-  log "created temporary directory $TEMP_DIRECTORY" 0 true
+  if [ $? = 1 ]; then
+    log_error "could not create temp directory"
+  fi
+  log "created temp directory $TEMP_DIRECTORY" 2 true
 }
 
 function start_video_recording() {
