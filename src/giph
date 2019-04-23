@@ -286,17 +286,21 @@ function start_video_recording() {
   ffmpeg_command=${ffmpeg[@]}
   log "ffmpeg command: '$ffmpeg_command'" 2 true
   
-  eval "$ffmpeg_command" &
+  ${ffmpeg[@]} &
   FFMPEG_PID=$!
 
   log "started recording video with ffmpeg" 1 true
 
+  # TODO: don't use stop handler when $TIMER is set / implement timer UI
   stop_video_recording_handler
 
   wait $FFMPEG_PID
+
   if [ $? = 1 ]; then
     log_error "recording video with ffmpeg failed"
   fi
+
+  log "completed ffmpeg video recording" 1 true
 }
 
 function stop_video_recording_handler() {
@@ -313,19 +317,17 @@ function stop_video_recording_handler() {
 function stop_recording_handler_terminal() {
   log_info "stop recording with ${BLACK}${ON_CYAN} ctrl+c ${CR} or send INT SIGNAL to this process ${BLACK}${ON_CYAN} killall -int -g capture ${CR}" 
   trap '' INT
-  wait $FFMPEG_PID
-  log "stopped ffmpeg recording" 0 true
 }
 
 function stop_recording_handler_zenity() {
-  zenity --question --cancel-label "Cancel" --ok-label "Save" --text "\n<big><big>recording...</big></big>" --icon-name media-record &> /dev/null
+  zenity --question --cancel-label "Cancel" --ok-label "Stop" --text "\n<big><big>recording...</big></big>" --icon-name media-record &> /dev/null
   zenity_return=$?
 
   kill -INT $FFMPEG_PID
-  wait $FFMPEG_PID
 
   if [ $zenity_return = 1 ]; then
-    log_error "recording canceled by user"
+    wait $FFMPEG_PID
+    log_error "video recording canceled by user"
   fi
 }
 
