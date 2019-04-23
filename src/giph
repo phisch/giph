@@ -463,29 +463,40 @@ function get_geometry_for_desktop() {
 }
 
 function encode_gif() {
-  log "encoding gif" 1 true
   case "$ENCODER" in
     "ffmpeg")
+      log "encoding gif using ffmpeg encoder" 1 true
       encode_gif_ffmpeg
       ;;
     "gifski")
+      log "encoding gif using gifski encoder" 1 true
       encode_gif_gifski
       ;;
   esac
 }
 
 function encode_gif_ffmpeg() {
-  log "using ffmpeg encoder" 2 true
-
+  ffmpeg_generate_palette=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -vf palettegen "$TEMP_DIRECTORY/palette.png")
+  
+  if [ "$VERBOSITY" -lt "3" ]; then
+    ffmpeg_generate_palette+=(-loglevel "quiet")
+  fi
+  
   log "generating color palette from recording" 2 true
-  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" -vf palettegen "$TEMP_DIRECTORY/palette.png"
+  "${ffmpeg_generate_palette[@]}"
   
   if [ $? = 1 ]; then
     log_error "could not generate color palette from video"
   fi
-
+  
+  ffmpeg_encode_gif=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r $FRAMERATE "$TEMP_DIRECTORY/encoded.gif")
+  
+  if [ "$VERBOSITY" -lt "3" ]; then
+    ffmpeg_encode_gif+=(-loglevel "quiet")
+  fi
+  
   log "encoding gif using recorded video and generated palette" 2 true
-  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r $FRAMERATE "$TEMP_DIRECTORY/encoded.gif"
+  "${ffmpeg_encode_gif[@]}"
 
   if [ $? = 1 ]; then
     log_error "could not encode gif from video and color palette"
@@ -493,16 +504,25 @@ function encode_gif_ffmpeg() {
 }
 
 function encode_gif_gifski() {
-  log "using gifski encoder" 2 true
-
+  ffmpeg=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" "$TEMP_DIRECTORY/frame%04d.png")
+  
+  if [ "$VERBOSITY" -lt "3" ]; then
+    ffmpeg+=(-loglevel "quiet")
+  fi
+  
   log "separating video frames into individual images" 2 true
-  ffmpeg -loglevel "quiet" -i "$TEMP_DIRECTORY/recording.mkv" "$TEMP_DIRECTORY/frame%04d.png"
+  "${ffmpeg[@]}"
 
   if [ $? = 1 ]; then
     log_error "could not separate video frames into individual images"
   fi
 
-  gifski=(gifski --quiet)
+  gifski=(gifski)
+
+  if [ "$VERBOSITY" -lt "3" ]; then
+    gifski+=(--quiet)
+  fi
+
   gifski+=(--quality $QUALITY)
   gifski+=(--fps $FRAMERATE)
   gifski+=(-o "$TEMP_DIRECTORY/encoded.gif")
@@ -516,18 +536,23 @@ function encode_gif_gifski() {
   fi
 }
 
-function start_giph() {
-  get_geometry
-  create_temp_directory
-  start_video_recording
-  encode_gif
-
+function deliver_final_gif() {
   if [ -n "$OUTPUT_FILE" ]; then
+    log "saving final gif to $OUTPUT_FILE" 1 true
     mv "$TEMP_DIRECTORY/encoded.gif" "$OUTPUT_FILE"
   else
     cat "$TEMP_DIRECTORY/encoded.gif"
   fi
 }
 
-start_giph
+function giph() {
+  get_geometry
+  create_temp_directory
+  start_video_recording
+  encode_gif
+  deliver_final_gif
+}
+
+giph
+
 wait
