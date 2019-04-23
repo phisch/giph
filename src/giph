@@ -266,7 +266,9 @@ function start_video_recording() {
   ffmpeg+=(-framerate $FRAMERATE)
   ffmpeg+=(-s "$width"x"$height")
   ffmpeg+=(-i :0.0+$offset_x,$offset_y)
-  
+  ffmpeg+=(-preset ultrafast)
+  ffmpeg+=(-crf 0)
+
   if [ "$VERBOSITY" -lt "3" ]; then
     ffmpeg+=(-loglevel "quiet")
   fi
@@ -275,21 +277,26 @@ function start_video_recording() {
     ffmpeg+=(-t $TIMER)
   fi
 
-  ffmpeg+=(-preset ultrafast)
-  ffmpeg+=(-crf 0)
-
   ffmpeg+=("$TEMP_DIRECTORY/recording.mkv")
 
   if [ "$DELAY" -gt 0 ]; then
     countdown $DELAY
   fi
 
-  ${ffmpeg[@]} &
+  ffmpeg_command=${ffmpeg[@]}
+  log "ffmpeg command: '$ffmpeg_command'" 2 true
+  
+  eval "$ffmpeg_command" &
   FFMPEG_PID=$!
 
-  log "started ffmpeg recording" 0 true
+  log "started recording video with ffmpeg" 1 true
 
   stop_video_recording_handler
+
+  wait $FFMPEG_PID
+  if [ $? = 1 ]; then
+    log_error "recording video with ffmpeg failed"
+  fi
 }
 
 function stop_video_recording_handler() {
