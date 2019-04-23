@@ -266,7 +266,10 @@ function start_video_recording() {
   ffmpeg+=(-framerate $FRAMERATE)
   ffmpeg+=(-s "$width"x"$height")
   ffmpeg+=(-i :0.0+$offset_x,$offset_y)
-  ffmpeg+=(-loglevel "quiet")
+  
+  if [ "$VERBOSITY" -lt "3" ]; then
+    ffmpeg+=(-loglevel "quiet")
+  fi
 
   if [ -n "$TIMER" ]; then
     ffmpeg+=(-t $TIMER)
