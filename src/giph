@@ -147,19 +147,19 @@ function log() {
 }
 
 function log_error() {
-  log "${RED}ERROR: $1${CR}" -1 ${2:-true} true
+  log "${RED}ERROR:${CR} $1" -1 ${2:-true} true
 }
 
 function log_warning() {
-  log "${YELLOW}$1${CR}" 0 ${2:-true}
+  log "${YELLOW}WARNING:${CR} $1" 0 ${2:-true}
 }
 
 function log_success() {
-  log "${GREEN}$1${CR}" 0 ${2:-true}
+  log "${GREEN}SUCCESS:${CR} $1" 0 ${2:-true}
 }
 
 function log_info() {
-  log "${CYAN}$1${CR}" 0 ${2:-true}
+  log "${CYAN}INFO:${CR} $1" 0 ${2:-true}
 }
 
 if [ -z "$1" ]; then
@@ -315,7 +315,7 @@ function stop_video_recording_handler() {
 }
 
 function stop_recording_handler_cli() {
-  log_info "stop recording with ${BLACK}${ON_CYAN} ctrl+c ${CR} or send INT SIGNAL to this process ${BLACK}${ON_CYAN} killall -int -g capture ${CR}" 
+  log_info "stop recording with ${BCYAN}ctrl+c${CR} or send INT SIGNAL to this process ${BCYAN}killall -int -g capture${CR}" 
   trap '' INT
 }
 
@@ -363,11 +363,11 @@ function countdown_zenity() {
 
   while [ "$counter" -ge "0" ]; do
       percent=$((100-100*counter/countdown_time))
-      echo "#get ready to record"
+      echo "#recording will start in $counter"
       echo $percent
       ((counter-=1))
       sleep 1
-  done | zenity --progress --time-remaining $countdown_time --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
+  done | zenity --progress $countdown_time --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
 
   if [ $? = 1 ]; then
     log_error "recording canceled by user"
@@ -385,6 +385,7 @@ function get_geometry() {
     log "determining geometry from provided window id" 1 true
     get_geometry_from_window_id
   else
+    log_warning "no method to provide geometry given, using full desktop geometry instead"
     log "determining desktop geometry" 1 true
     get_geometry_for_desktop
   fi
@@ -538,8 +539,10 @@ function encode_gif_gifski() {
 
 function deliver_final_gif() {
   if [ -n "$OUTPUT_FILE" ]; then
-    log "saving final gif to $OUTPUT_FILE" 1 true
     mv "$TEMP_DIRECTORY/encoded.gif" "$OUTPUT_FILE"
+    if [ $? = 0 ]; then
+      log_success "final gif saved as \"$OUTPUT_FILE\""
+    fi
   else
     cat "$TEMP_DIRECTORY/encoded.gif"
   fi
