@@ -41,4 +41,4 @@ Select a window or area with slop. The selection rectangle is highlighted in a t
 ```bash
 $ ./giph -g 100x200+0+0 -d 5 -t 10
 ```
-Records a 100x200 pixel rectangle in the top left corner of the screen. The recording starts after a 5 seconds countdown and will record for exactly 10 seconds. The resulting gif will be printed to standard output, which makes this able to be piped into other scripts like a file-upload to an image host.
+Records a 100x200 pixel rectangle in the top left corner of the screen. The recording starts after a 5 seconds countdown and will record for exactly 10 seconds. The resulting gif will be printed to standard output, which makes this able to be piped into other scripts like a file-upload to an image hosting service.
