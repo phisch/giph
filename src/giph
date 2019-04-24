@@ -9,9 +9,8 @@ VERBOSITY=0
 
 # options
 SLOP=0
-QUALITY=80
 DELAY=0
-FRAMERATE=10
+FRAMERATE=15
 INTERFACE="cli"
 ENCODER="ffmpeg"
 
@@ -20,146 +19,73 @@ function print_version() {
   exit 0
 }
 
-# TODO: find better short names to avoid duplicates
 function print_help() {
   cat << EOF
 SYNOPSIS
-    giph [OPTIONS] [FILEPATH]
+    giph [OPTIONS] [FILENAME]
 
 DESCRIPTION
-    giph is a utility script that records a region, window or your desktop
-    and encodes the recording into a high quality gif. If [FILEPATH] is
-    omitted, the image is printed directly to stdout.
+  giph is a screen recorder that records the desktop, a window or selection and encodes it into a gif file. It prints the encoded gif directly to standard output when omitting [FILENAME].
 
 OPTIONS
-    -h, --help
-        Print help and exit.
-
-    --version
-        Print version and exit.
-
-    -v*, --verbose
-        Increases the verbosity level per v, while --verbose sets the verbosity level to 1.
-
-    --quiet
-        Sets the verbosity level to -1. This will mute all output except the resulting gif
-        that is printed to stdout when no file-destination is given and critical errors.
-
-    -s, --select
-        Enables an interactive selection mode where you can select the
-        desired region or window before the recording is started. This
-        uses the "SLOP OPTIONS" described below.
-
-    -g, --geometry=GEOMETRY
-        Sets the region to capture, uses local coordinates from the given window.
-        So -g10x30-5+0 would represent the rectangle wxh+x+y where w=10, h=30, x=-5 and y=0.
-        x and y are the upper left location of this rectangle.
-    
-    -w, --window=INT
-        Sets the desired window to capture, defaults to the root window.
-
-    -i, --interface=STRING (default="`echo $INTERFACE`")
-        Defines which interface is used for countdown and stop recording.
-        "cli": the recodring has to be stopped by either pressing ctrl+c, or
-        sending a SIGINT to this process (\`killall -INT giph\`).
-        "zenity": the recording can be stopped by clicking a button in a window displayed by zenity    
-    
-    -e, --encoder=STRING (default="`echo $ENCODER`")
-        Sets the encoder used to create the final gif.
-        "ffmpeg": High quality gif encoder.
-        "gifski": Highest quality gif encoder, but quite slow. Uses the "GIFSKI OPTIONS" described below.
-    
-    -d, --delay=INT (default=`echo $DELAY`)
-        Sets the time in seconds to wait before the recording starts.
-        By default this prints a countdown to show how many seconds are left. 
-
-    -t, --timer=TIMEDURATION
-        Sets a fixed time to record. The format is a timeduration as described in
-        the ffmpeg documentation (https://ffmpeg.org/ffmpeg-utils.html#Time-duration).
-        As an example, '10' would mean 10 seconds, '3:30' means 3 minutes and 30 seconds,
-        '1:02:03' means 1 hour, 2 minutes and 3 seconds, and '5.5' means 5.5 seconds.
-    
-    -f, --framerate=INT (default=`echo $FRAMERATE`)
-        Sets the desired framerate of the recorded gif.
-        A higher framerate will result in a greater filesize.
+  -h,  --help                 Print help and exit.
+       --version              Print version and exit.
+  -v*, --verbose, --quiet     Set the verbosity.
+  -s,  --select               Enable slop selection.
+  -g,  --geometry=STRING      Record rectangle by geometry. (like 100x300+0+0)
+  -w,  --window=INT           Record window by id.
+  -d,  --delay=INT            Time in seconds before the recording starts. 
+  -t,  --timer=TIMEDURATION   Time of the recording. (e.g. 10 for 10 seconds or 1:30 for 1 minute 30 seconds)
+  -f,  --framerate=INT        Set the framerate.
+  -i,  --interface=STRING     Set the user interface that should be used. ("cli" or "zenity")    
+  -e,  --encoder=STRING       Set the encoder that should be used. ("ffmpeg" or "gifski")
 
 SLOP OPTIONS
-    -l, --highlight
-        Instead of outlining the selection, it will be highlighted.
-        This is only useful when --color is set to a transparent color.
-
-    -c, --color=FLOAT,FLOAT,FLOAT,FLOAT
-        Set a color for the selection. Supports RGB or RGBA values.
-    
-    -p, --padding=FLOAT (default=0)
-        Set the padding size of the selection. Can be negative.
-    
-    -b, --bordersize=FLOAT (default=1)
-        Set the selection rectange's thickness.
+  -b, --bordersize=FLOAT                Set the selection border thickness.
+  -p, --padding=FLOAT                   Set the selection padding.
+  -to, --tolerance=FLOAT                Set how far the mouse can move after clicking before recrangle draws.
+  -c, --color=FLOAT,FLOAT,FLOAT,FLOAT   Set the selection color.
+  -r, --shader=STRING                   Set the shader to be used.
+  -n, --nodecorations=INT               Set how aggresively decorations should be avoided.
+  -l, --highlight                       Highlight the selection rectangle.
+  -k, --nokeyboard                      Disable cancel through keypress.
+  -o, --noopengl                        Disable graphics acceleration.
 
 GIFSKI OPTIONS
-    -q, --quality=INT[1-100] (default=`echo $QUALITY`)
-        An integer from 1 to 100 that determines the final gif quality,
-        where 1 is the lowest and 100 is the best quality.
+  -gq, --gifski-quality=INT   Set the desired gifski quality from 1 to 100.
+  -gf, --gifski-fast          3 times faster encoding, 10% lower quality, larger filesize.
 EOF
 
   exit 0
 }
 
-# clear last line
-CLL='\033[0m\r'
-
-# regular, bold, underlined, background, intense, bold intense and background intense colors
-BLACK='\033[0;30m';RED='\033[0;31m';GREEN='\033[0;32m';YELLOW='\033[0;33m';BLUE='\033[0;34m';PURPLE='\033[0;35m';CYAN='\033[0;36m';WHITE='\033[0;37m';
-BBLACK='\033[1;30m';BRED='\033[1;31m';BGREEN='\033[1;32m';BYELLOW='\033[1;33m';BBLUE='\033[1;34m';BPURPLE='\033[1;35m';BCYAN='\033[1;36m';BWHITE='\033[1;37m';
-UBLACK='\033[4;30m';URED='\033[4;31m';UGREEN='\033[4;32m';UYELLOW='\033[4;33m';UBLUE='\033[4;34m';UPURPLE='\033[4;35m';UCYAN='\033[4;36m';UWHITE='\033[4;37m';
-ON_BLACK='\033[40m';ON_RED='\033[41m';ON_GREEN='\033[42m';ON_YELLOW='\033[43m';ON_BLUE='\033[44m';ON_PURPLE='\033[45m';ON_CYAN='\033[46m';ON_WHITE='\033[47m';
-IBLACK='\033[0;90m';IRED='\033[0;91m';IGREEN='\033[0;92m';IYELLOW='\033[0;93m';IBLUE='\033[0;94m';IPURPLE='\033[0;95m';ICYAN='\033[0;96m';IWHITE='\033[0;97m';
-BIBLACK='\033[1;90m';BIRED='\033[1;91m';BIGREEN='\033[1;92m';BIYELLOW='\033[1;93m';BIBLUE='\033[1;94m';BIPURPLE='\033[1;95m';BICYAN='\033[1;96m';BIWHITE='\033[1;97m';
-ON_IBLACK='\033[0;100m';ON_IRED='\033[0;101m';ON_IGREEN='\033[0;102m';ON_IYELLOW='\033[0;103m';ON_IBLUE='\033[0;104m';ON_IPURPLE='\033[0;105m';ON_ICYAN='\033[0;106m';ON_IWHITE='\033[0;107m'
-
-# color reset
-CR='\033[0m'
-
 # log a message - (message:string, verbosity:int, timestamp:bool, stop_execution:bool, no_trailing_newline:bool)
 function log() {
-  if [ "${2:-1}" -gt "$VERBOSITY" ]; then
-    return 0
-  fi
+  [ "${2:-1}" -gt "$VERBOSITY" ] && return 0
 
   log=(echo -e)
-
-  if [ "$5" = true ]; then
-    log+=(-n)
-  fi
-
-  if [ "$3" = true ]; then
-    log+=("${WHITE}$(date '+%Y-%m-%d %H:%M:%S'):${CR}")
-  fi
-
+  [ "$5" = true ] && log+=(-n)
+  [ "$3" = true ] && log+=("\033[0;37m$(date '+%Y-%m-%d %H:%M:%S'):\033[0m")
   log+=("$1")
-
   ${log[@]}
 
-  if [ "$4" = true ]; then
-    exit 1;
-  fi
+  [ "$4" = true ] && exit 1
 }
 
 function log_error() {
-  log "${RED}ERROR:${CR} $1" -1 ${2:-true} true
+  log "\033[0;31mERROR:\033[0m $1" -1 ${2:-true} true
 }
 
 function log_warning() {
-  log "${YELLOW}WARNING:${CR} $1" 0 ${2:-true}
+  log "\033[0;33mWARNING:\033[0m $1" 0 ${2:-true}
 }
 
 function log_success() {
-  log "${GREEN}SUCCESS:${CR} $1" 0 ${2:-true}
+  log "\033[0;32mSUCCESS:\033[0m $1" 0 ${2:-true}
 }
 
 function log_info() {
-  log "${CYAN}INFO:${CR} $1" 0 ${2:-true}
+  log "\033[0;36mINFO:\033[0m $1" 0 ${2:-true}
 }
 
 if [ -z "$1" ]; then
@@ -169,6 +95,12 @@ fi
 # flag handling
 while [[ "$1" == -* ]]; do
   case "$1" in
+  -h|--help)
+    print_help
+    ;;
+  --version)
+    print_version
+    ;;
   -v*)
     (( VERBOSITY += ${#1} - 1 ))
     ;;
@@ -177,12 +109,6 @@ while [[ "$1" == -* ]]; do
     ;;
   --quiet)
     VERBOSITY=-1
-    ;;
-  -h|--help)
-    print_help
-    ;;
-  --version)
-    print_version
     ;;
   -s|--select)
     SLOP=1
@@ -194,14 +120,6 @@ while [[ "$1" == -* ]]; do
   -w|--window)
     shift
     WINDOW="$1"
-    ;;
-  -i|--interface)
-    shift
-    INTERFACE="$1"
-    ;;
-  -e|--encoder)
-    shift
-    ENCODER="$1"
     ;;
   -d|--delay)
     shift
@@ -215,24 +133,53 @@ while [[ "$1" == -* ]]; do
     shift
     FRAMERATE="$1"
     ;;
-  -l|--highlight)
-    SLOP_HIGHLIGHT=1
-    ;;
-  -c|--color)
+  -i|--interface)
     shift
-    SLOP_COLOR="$1"
+    INTERFACE="$1"
     ;;
-  -p|--padding)
+  -e|--encoder)
     shift
-    SLOP_PADDING="$1"
+    ENCODER="$1"
     ;;
   -b|--bordersize)
     shift
     SLOP_BORDERSIZE="$1"
     ;;
-  -q|--quality)
+  -p|--padding)
     shift
-    QUALITY="$1"
+    SLOP_PADDING="$1"
+    ;;
+  -to|--tolerance)
+    shift
+    SLOP_TOLERANCE="$1"
+    ;;
+  -c|--color)
+    shift
+    SLOP_COLOR="$1"
+    ;;
+  -r|--shader)
+    shift
+    SLOP_SHADER="$1"
+    ;;
+  -n|--nodecorations)
+    shift
+    SLOP_NODECORATIONS="$1"
+    ;;
+  -l|--highlight)
+    SLOP_HIGHLIGHT=true
+    ;;
+  -k|--nokeyboard)
+    SLOP_NOKEYBOARD=true
+    ;;
+  -o|--noopengl)
+    SLOP_NOOPENGPL=true
+    ;;
+  -gq|--gifski-quality)
+    shift
+    GIFSKI_QUALITY="$1"
+    ;;
+  -gf|--gifski-fast)
+    GIFSKI_FAST=true
     ;;
   -*)
     log_error "option '$1' does not exist" false
@@ -245,19 +192,85 @@ while [[ "$1" == -* ]]; do
   shift
 done
 
-# additional option handling
-if [ -n "$1" ]; then
-  OUTPUT_FILE=$1
-else
-  VERBOSITY=-1
-fi
+# set verbosity to -1 if the file should be printed to stdout
+[ -n "$1" ] && OUTPUT_FILE=$1 || VERBOSITY=-1
 
-function create_temp_directory() {
-  TEMP_DIRECTORY=$(mktemp -d)
-  if [ $? = 1 ]; then
-    log_error "could not create temp directory"
+function get_geometry() {
+  if [ $SLOP = 1 ]; then
+    log "using slop to determine recording geometry" 1 true
+    get_geometry_from_slop
+  elif [ -n "$GEOMETRY" ]; then
+    log "using provided geometry string" 1 true
+    get_geometry_from_string
+  elif [ -n "$WINDOW" ]; then
+    log "determining geometry from provided window id" 1 true
+    get_geometry_from_window_id
+  else
+    log_warning "no method to provide geometry given, using full desktop geometry instead"
+    log "determining desktop geometry" 1 true
+    get_geometry_for_desktop
   fi
-  log "created temp directory $TEMP_DIRECTORY" 2 true
+
+  log "geometry string: $GEOMETRY_STRING" 2 true
+
+  parse_geometry_string
+}
+
+function get_geometry_from_slop() {
+  slop=(slop -f "%g")
+  [ -n "$SLOP_BORDERSIZE" ] && slop+=(-b $SLOP_BORDERSIZE)
+  [ -n "$SLOP_PADDING" ] && slop+=(-p $SLOP_PADDING)
+  [ -n "$SLOP_TOLERANCE" ] && slop+=(-t $SLOP_TOLERANCE)
+  [ -n "$SLOP_COLOR" ] && slop+=(-c $SLOP_COLOR)
+  [ -n "$SLOP_SHADER" ] && slop+=(-r $SLOP_SHADER)
+  [ -n "$SLOP_NODECORATIONS" ] && slop+=(-n $SLOP_NODECORATIONS)
+  [ -n "$SLOP_HIGHLIGHT" ] && slop+=(-l)
+  [ -n "$SLOP_NOKEYBOARD" ] && slop+=(-k)
+  [ -n "$SLOP_NOOPENGL" ] && slop+=(-o)
+  [ "$VERBOSITY" -lt "3" ] && slop+=(-q)
+
+  slop_command=${slop[@]}
+  log "slop command: '$slop_command'" 2 true
+
+  slop_value=$($slop_command)
+  [ "$?" -eq 1 ] && log_error "slop selection got canceled"
+
+  GEOMETRY_STRING=$slop_value
+}
+
+function get_geometry_from_string() {
+  GEOMETRY_STRING=$GEOMETRY
+}
+
+function get_geometry_from_window_id() {
+  xwininfo -id $WINDOW &> /dev/null
+  [ $? = 1 ] && log_error "window with id $WINDOW does not exist"
+  GEOMETRY_STRING="$(xwininfo -id $WINDOW | grep 'geometry' | awk '{print $2;}')"
+}
+
+function get_geometry_for_desktop() {
+  GEOMETRY_STRING="$(xwininfo -root | grep 'geometry' | awk '{print $2;}')"
+}
+
+function parse_geometry_string() {
+  [[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)[+-]([0-9]+)[+-]([0-9]+) ]] 
+
+  width=${BASH_REMATCH[1]}
+  height=${BASH_REMATCH[2]}
+  offset_x=${BASH_REMATCH[3]}
+  offset_y=${BASH_REMATCH[4]}
+
+  [ -z "$width" ] || [ -z "$height" ] || [ -z "$offset_x" ] || [ -z "$offset_y" ] && {
+    log_error "could not parse geometry string '$GEOMETRY_STRING'"
+  }
+
+  log "parsed geometry: width=$width, height=$height, offset_x=$offset_x, offset_y=$offset_y" 2 true
+}
+
+function create_temporary_directory() {
+  TEMP_DIRECTORY=$(mktemp -d)
+  [ $? = 1 ] && log_error "could not create temporary directory"
+  log "created temporary directory $TEMP_DIRECTORY" 2 true
 }
 
 function start_video_recording() {
@@ -269,19 +282,12 @@ function start_video_recording() {
   ffmpeg+=(-preset ultrafast)
   ffmpeg+=(-crf 0)
 
-  if [ "$VERBOSITY" -lt "3" ]; then
-    ffmpeg+=(-loglevel "quiet")
-  fi
-
-  if [ -n "$TIMER" ]; then
-    ffmpeg+=(-t $TIMER)
-  fi
+  [ "$VERBOSITY" -lt "3" ] && ffmpeg+=(-loglevel "quiet")
+  [ -n "$TIMER" ] && [ "$TIMER" -gt 0 ] && ffmpeg+=(-t $TIMER)
 
   ffmpeg+=("$TEMP_DIRECTORY/recording.mkv")
 
-  if [ "$DELAY" -gt 0 ]; then
-    delay $DELAY
-  fi
+  [ -n "$DELAY" ] && [ "$DELAY" -gt 0 ] && delay $DELAY
 
   ffmpeg_command=${ffmpeg[@]}
   log "ffmpeg command: '$ffmpeg_command'" 2 true
@@ -291,7 +297,7 @@ function start_video_recording() {
 
   log "started recording video with ffmpeg" 1 true
 
-  if [ "$TIMER" -gt 0 ]; then
+  if [ -n "$TIMER" ] && [ "$TIMER" -gt 0 ]; then
     timer $TIMER
   else
     stop_video_recording_handler
@@ -299,39 +305,44 @@ function start_video_recording() {
 
   wait $FFMPEG_PID
 
-  if [ $? = 1 ]; then
-    log_error "recording video with ffmpeg failed"
-  fi
-
+  [ $? = 1 ] && log_error "recording video with ffmpeg failed"
   log "completed ffmpeg video recording" 1 true
 }
 
-function stop_video_recording_handler() {
+function delay() {
   case "$INTERFACE" in
     "cli")
-      stop_recording_handler_cli
+      countdown_cli $1 "recording starts in"
       ;;
     "zenity")
-      stop_recording_handler_zenity
+      delay_zenity $1
       ;;
   esac
 }
 
-function stop_recording_handler_cli() {
-  log_info "stop recording with ${BCYAN}ctrl+c${CR} or send INT SIGNAL to this process ${BCYAN}killall -int -g capture${CR}" 
-  trap '' INT
+function countdown_cli() {
+  seconds=$1
+  while [ $seconds -ge 0 ]; do
+    log "\r\033[K\033[0;36m$2:\033[0m $seconds" 0 false false true
+    if [ $seconds -gt 0 ]; then
+      sleep 1
+    else 
+      log "\r\033[K" 0 false false true
+    fi
+    : $((seconds--))
+  done
 }
 
-function stop_recording_handler_zenity() {
-  zenity --question --cancel-label "Cancel" --ok-label "Stop" --text "\n<big><big>recording...</big></big>" --icon-name media-record &> /dev/null
-  zenity_return=$?
-
-  kill -INT $FFMPEG_PID
-
-  if [ $zenity_return = 1 ]; then
-    wait $FFMPEG_PID
-    log_error "video recording canceled by user"
-  fi
+function delay_zenity() {
+  counter=$1
+  while [ "$counter" -ge "0" ]; do
+      percent=$((100-100*counter/$1))
+      echo "#recording will start in $counter"
+      echo $percent
+      ((counter-=1))
+      sleep 1
+  done | zenity --progress $1 --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
+  [ $? = 1 ] && log_error "recording canceled by user"
 }
 
 function timer() {
@@ -356,133 +367,32 @@ function timer_zenity() {
   done | zenity --progress $1 --no-cancel --auto-close &> /dev/null
 }
 
-function delay() {
+function stop_video_recording_handler() {
   case "$INTERFACE" in
     "cli")
-      countdown_cli $1 "recording starts in"
+      stop_recording_handler_cli
       ;;
     "zenity")
-      delay_zenity $1
+      stop_recording_handler_zenity
       ;;
   esac
 }
 
-function delay_zenity() {
-  counter=$1
-
-  while [ "$counter" -ge "0" ]; do
-      percent=$((100-100*counter/$1))
-      echo "#recording will start in $counter"
-      echo $percent
-      ((counter-=1))
-      sleep 1
-  done | zenity --progress $1 --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
-
-  if [ $? = 1 ]; then
-    log_error "recording canceled by user"
-  fi
+function stop_recording_handler_cli() {
+  log_info "stop recording with \033[1;36mctrl+c\033[0m or send INT SIGNAL to this process \033[1;36mkillall -int -g capture\033[0m" 
+  trap '' INT
 }
 
-function countdown_cli() {
-  seconds=$1
-  while [ $seconds -ge 0 ]; do
-    log "\r\033[K${CYAN}$2:${CR} $seconds" 0 false false true
-    if [ $seconds -gt 0 ]; then
-      sleep 1
-    else 
-      log "\r\033[K" 0 false false true
-    fi
-    : $((seconds--))
-  done
-}
+function stop_recording_handler_zenity() {
+  zenity --question --cancel-label "Cancel" --ok-label "Stop" --text "\n<big>recording...</big>" --icon-name media-record &> /dev/null
+  zenity_return=$?
 
-function get_geometry() {
-  if [ $SLOP = 1 ]; then
-    log "using slop to determine recording geometry" 1 true
-    get_geometry_from_slop
-  elif [ -n "$GEOMETRY" ]; then
-    log "using provided geometry string" 1 true
-    get_geometry_from_string
-  elif [ -n "$WINDOW" ]; then
-    log "determining geometry from provided window id" 1 true
-    get_geometry_from_window_id
-  else
-    log_warning "no method to provide geometry given, using full desktop geometry instead"
-    log "determining desktop geometry" 1 true
-    get_geometry_for_desktop
+  kill -INT $FFMPEG_PID
+
+  if [ $zenity_return = 1 ]; then
+    wait $FFMPEG_PID
+    log_error "video recording canceled by user"
   fi
-
-  log "geometry string: $GEOMETRY_STRING" 2 true
-
-  parse_geometry_string
-}
-
-function parse_geometry_string() {
-  [[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)[+-]([0-9]+)[+-]([0-9]+) ]] 
-
-  width=${BASH_REMATCH[1]}
-  height=${BASH_REMATCH[2]}
-  offset_x=${BASH_REMATCH[3]}
-  offset_y=${BASH_REMATCH[4]}
-
-  if [ -z "$width" ] || [ -z "$height" ] || [ -z "$offset_x" ] || [ -z "$offset_y" ]; then
-    log_error "could not parse geometry string '$GEOMETRY_STRING'"
-  fi
-
-  log "parsed geometry: width=$width, height=$height, offset_x=$offset_x, offset_y=$offset_y" 2 true
-}
-
-function get_geometry_from_slop() {
-  slop=(slop -f "%g")
-
-  if [ -n "$SLOP_HIGHLIGHT" ]; then
-    slop+=(-l)
-  fi
-
-  if [ -n "$SLOP_BORDERSIZE" ]; then
-    slop+=(-b $SLOP_BORDERSIZE)
-  fi
-
-  if [ -n "$SLOP_PADDING" ]; then
-    slop+=(-p $SLOP_PADDING)
-  fi
-
-  if [ -n "$SLOP_COLOR" ]; then
-    slop+=(-c $SLOP_COLOR)
-  fi
-
-  if [ "$VERBOSITY" -lt "3" ]; then
-    slop+=(-q)
-  fi
-
-  slop_command=${slop[@]}
-  log "slop command: '$slop_command'" 2 true
-
-  slop_value=$($slop_command)
-
-  if [ "$?" -eq 1 ]; then
-    log_error "slop selection got canceled"
-  fi
-
-  GEOMETRY_STRING=$slop_value
-}
-
-function get_geometry_from_string() {
-  GEOMETRY_STRING=$GEOMETRY
-}
-
-function get_geometry_from_window_id() {
-  xwininfo -id $WINDOW &> /dev/null
-
-  if [ $? = 1 ]; then
-    log_error "window with id $WINDOW does not exist"
-  fi
-
-  GEOMETRY_STRING="$(xwininfo -id $WINDOW | grep 'geometry' | awk '{print $2;}')"
-}
-
-function get_geometry_for_desktop() {
-  GEOMETRY_STRING="$(xwininfo -root | grep 'geometry' | awk '{print $2;}')"
 }
 
 function encode_gif() {
@@ -500,84 +410,63 @@ function encode_gif() {
 
 function encode_gif_ffmpeg() {
   ffmpeg_generate_palette=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -vf palettegen "$TEMP_DIRECTORY/palette.png")
-  
-  if [ "$VERBOSITY" -lt "3" ]; then
-    ffmpeg_generate_palette+=(-loglevel "quiet")
-  fi
+  [ "$VERBOSITY" -lt "3" ] && ffmpeg_generate_palette+=(-loglevel "quiet")
   
   log "generating color palette from recording" 2 true
   "${ffmpeg_generate_palette[@]}"
-  
-  if [ $? = 1 ]; then
-    log_error "could not generate color palette from video"
-  fi
+  [ $? = 1 ] && log_error "could not generate color palette from video"
   
   ffmpeg_encode_gif=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r $FRAMERATE "$TEMP_DIRECTORY/encoded.gif")
-  
-  if [ "$VERBOSITY" -lt "3" ]; then
-    ffmpeg_encode_gif+=(-loglevel "quiet")
-  fi
+  [ "$VERBOSITY" -lt "3" ] && ffmpeg_encode_gif+=(-loglevel "quiet")
   
   log "encoding gif using recorded video and generated palette" 2 true
   "${ffmpeg_encode_gif[@]}"
-
-  if [ $? = 1 ]; then
-    log_error "could not encode gif from video and color palette"
-  fi
+  [ $? = 1 ] && log_error "could not encode gif from video and color palette"
 }
 
 function encode_gif_gifski() {
   ffmpeg=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" "$TEMP_DIRECTORY/frame%04d.png")
-  
-  if [ "$VERBOSITY" -lt "3" ]; then
-    ffmpeg+=(-loglevel "quiet")
-  fi
+  [ "$VERBOSITY" -lt "3" ] && ffmpeg+=(-loglevel "quiet")
   
   log "separating video frames into individual images" 2 true
   "${ffmpeg[@]}"
+  [ $? = 1 ] && log_error "could not separate video frames into individual images"
 
-  if [ $? = 1 ]; then
-    log_error "could not separate video frames into individual images"
-  fi
-
-  gifski=(gifski)
-
-  if [ "$VERBOSITY" -lt "3" ]; then
-    gifski+=(--quiet)
-  fi
-
-  gifski+=(--quality $QUALITY)
-  gifski+=(--fps $FRAMERATE)
-  gifski+=(-o "$TEMP_DIRECTORY/encoded.gif")
+  gifski=(gifski --fps $FRAMERATE -o "$TEMP_DIRECTORY/encoded.gif")
+  [ "$VERBOSITY" -lt "3" ] && gifski+=(--quiet)
+  [ -n "$GIFSKI_QUALITY" ] && gifski+=(--quality $GIFSKI_QUALITY)
+  [ -n "$GIFSKI_FAST" ] && gifski+=(--fast)
   gifski+=($TEMP_DIRECTORY/frame*.png)
 
   log "encoding gif using separated frames" 2 true
   "${gifski[@]}"
-
-  if [ $? = 1 ]; then
-    log_error "could not encode gif using separated frames"
-  fi
+  [ $? = 1 ] && log_error "could not encode gif using separated frames"
 }
 
 function deliver_final_gif() {
   if [ -n "$OUTPUT_FILE" ]; then
     mv "$TEMP_DIRECTORY/encoded.gif" "$OUTPUT_FILE"
-    if [ $? = 0 ]; then
-      log_success "final gif saved as \"$OUTPUT_FILE\""
-    fi
+    [ $? = 0 ] && log_success "final gif saved as \"$OUTPUT_FILE\""
   else
     cat "$TEMP_DIRECTORY/encoded.gif"
   fi
 }
 
+function delete_temporary_directory() {
+  rm -r $TEMP_DIRECTORY
+  [ $? = 1 ] && log_error "could not delete temporary directory"
+  log "deleted temporary directory $TEMP_DIRECTORY" 2 true
+}
+
 function giph() {
   get_geometry
-  create_temp_directory
+  create_temporary_directory
   start_video_recording
   encode_gif
   deliver_final_gif
+  delete_temporary_directory
+  exit 0
 }
 
 giph
-
 wait
