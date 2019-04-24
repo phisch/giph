@@ -172,7 +172,7 @@ while [[ "$1" == -* ]]; do
     SLOP_NOKEYBOARD=true
     ;;
   -o|--noopengl)
-    SLOP_NOOPENGPL=true
+    SLOP_NOOPENGL=true
     ;;
   -gq|--gifski-quality)
     shift
@@ -183,10 +183,6 @@ while [[ "$1" == -* ]]; do
     ;;
   -*)
     log_error "option '$1' does not exist" false
-    ;;
-  --)
-    shift
-    break
     ;;
   esac
   shift
