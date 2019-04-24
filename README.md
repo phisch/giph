@@ -1,5 +1,5 @@
 # giph
-giph is a utility script that records a region, window or your desktop and encodes the recording into a high quality gif.
+giph is a screen recorder that records the desktop, a window or selection and encodes it into a gif file. It prints the encoded gif directly to standard output when omitting the output filename.
 
 ## Installation
 
@@ -32,14 +32,13 @@ $ make install
 
 ## Examples
 
-This command lets you select a window or area with slop, where the selection rectangle is highlighted in a transparent white, the rectangle has a 5px bolder on the inside and the final gif is saved to `out.gif`. Also this command uses the default terminal ui, which lets you stop the recording by pressing `ctrl+c` after it started.
-
 ```bash
 $ ./giph -s -l -c 1,1,1,0.3 -b 5 -p -5 out.gif 
 ```
+Select a window or area with slop. The selection rectangle is highlighted in a transparent blue color abd has a 5px border on the inside. After stopping the recording with either `ctrl+c` or by sending a `SIGINT` to the processgroup, the resulting gif is written to `out.gif`.
 
-This adds a countdown before the video is recorded, and uses the zenity interface.
 
 ```bash
-$ ./giph -s -l -c 1,1,1,0.3 -b 5 -p -5 -d 5 --interface zenity out.gif
+$ ./giph -g 100x200+0+0 -d 5 -t 10
 ```
+Records a 100x200 pixel rectangle in the top left corner of the screen. The recording starts after a 5 seconds countdown and will record for exactly 10 seconds. The resulting gif will be printed to standard output, which makes this able to be piped into other scripts like a file-upload to a image hoster.
