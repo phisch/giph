@@ -67,25 +67,25 @@ function log() {
   [ "$5" = true ] && log+=(-n)
   [ "$3" = true ] && log+=("\033[0;37m$(date '+%Y-%m-%d %H:%M:%S'):\033[0m")
   log+=("$1")
-  ${log[@]}
+  "${log[@]}"
 
   [ "$4" = true ] && exit 1
 }
 
 function log_error() {
-  log "\033[0;31mERROR:\033[0m $1" -1 ${2:-true} true
+  log "\033[0;31mERROR:\033[0m $1" -1 "${2:-true}" true
 }
 
 function log_warning() {
-  log "\033[0;33mWARNING:\033[0m $1" 0 ${2:-true}
+  log "\033[0;33mWARNING:\033[0m $1" 0 "${2:-true}"
 }
 
 function log_success() {
-  log "\033[0;32mSUCCESS:\033[0m $1" 0 ${2:-true}
+  log "\033[0;32mSUCCESS:\033[0m $1" 0 "${2:-true}"
 }
 
 function log_info() {
-  log "\033[0;36mINFO:\033[0m $1" 0 ${2:-true}
+  log "\033[0;36mINFO:\033[0m $1" 0 "${2:-true}"
 }
 
 if [ -z "$1" ]; then
@@ -214,18 +214,18 @@ function get_geometry() {
 
 function get_geometry_from_slop() {
   slop=(slop -f "%g")
-  [ -n "$SLOP_BORDERSIZE" ] && slop+=(-b $SLOP_BORDERSIZE)
-  [ -n "$SLOP_PADDING" ] && slop+=(-p $SLOP_PADDING)
-  [ -n "$SLOP_TOLERANCE" ] && slop+=(-t $SLOP_TOLERANCE)
-  [ -n "$SLOP_COLOR" ] && slop+=(-c $SLOP_COLOR)
-  [ -n "$SLOP_SHADER" ] && slop+=(-r $SLOP_SHADER)
-  [ -n "$SLOP_NODECORATIONS" ] && slop+=(-n $SLOP_NODECORATIONS)
+  [ -n "$SLOP_BORDERSIZE" ] && slop+=(-b "$SLOP_BORDERSIZE")
+  [ -n "$SLOP_PADDING" ] && slop+=(-p "$SLOP_PADDING")
+  [ -n "$SLOP_TOLERANCE" ] && slop+=(-t "$SLOP_TOLERANCE")
+  [ -n "$SLOP_COLOR" ] && slop+=(-c "$SLOP_COLOR")
+  [ -n "$SLOP_SHADER" ] && slop+=(-r "$SLOP_SHADER")
+  [ -n "$SLOP_NODECORATIONS" ] && slop+=(-n "$SLOP_NODECORATIONS")
   [ -n "$SLOP_HIGHLIGHT" ] && slop+=(-l)
   [ -n "$SLOP_NOKEYBOARD" ] && slop+=(-k)
   [ -n "$SLOP_NOOPENGL" ] && slop+=(-o)
   [ "$VERBOSITY" -lt "3" ] && slop+=(-q)
 
-  slop_command=${slop[@]}
+  slop_command=${slop[*]}
   log "slop command: '$slop_command'" 2 true
 
   slop_value=$($slop_command)
@@ -239,9 +239,9 @@ function get_geometry_from_string() {
 }
 
 function get_geometry_from_window_id() {
-  xwininfo -id $WINDOW &> /dev/null
+  xwininfo -id "$WINDOW" &> /dev/null
   [ $? = 1 ] && log_error "window with id $WINDOW does not exist"
-  GEOMETRY_STRING="$(xwininfo -id $WINDOW | grep 'geometry' | awk '{print $2;}')"
+  GEOMETRY_STRING="$(xwininfo -id "$WINDOW" | grep 'geometry' | awk '{print $2;}')"
 }
 
 function get_geometry_for_desktop() {
@@ -272,29 +272,29 @@ function create_temporary_directory() {
 function start_video_recording() {
   ffmpeg=(ffmpeg)
   ffmpeg+=(-f x11grab)
-  ffmpeg+=(-framerate $FRAMERATE)
+  ffmpeg+=(-framerate "$FRAMERATE")
   ffmpeg+=(-s "$width"x"$height")
-  ffmpeg+=(-i :0.0+$offset_x,$offset_y)
+  ffmpeg+=(-i :0.0+"$offset_x","$offset_y")
   ffmpeg+=(-preset ultrafast)
   ffmpeg+=(-crf 0)
 
   [ "$VERBOSITY" -lt "3" ] && ffmpeg+=(-loglevel "quiet")
-  [ -n "$TIMER" ] && [ "$TIMER" -gt 0 ] && ffmpeg+=(-t $TIMER)
+  [ -n "$TIMER" ] && [ "$TIMER" -gt 0 ] && ffmpeg+=(-t "$TIMER")
 
   ffmpeg+=("$TEMP_DIRECTORY/recording.mkv")
 
-  [ -n "$DELAY" ] && [ "$DELAY" -gt 0 ] && delay $DELAY
+  [ -n "$DELAY" ] && [ "$DELAY" -gt 0 ] && delay "$DELAY"
 
-  ffmpeg_command=${ffmpeg[@]}
+  ffmpeg_command=${ffmpeg[*]}
   log "ffmpeg command: '$ffmpeg_command'" 2 true
   
-  ${ffmpeg[@]} &
+  "${ffmpeg[@]}" &
   FFMPEG_PID=$!
 
   log "started recording video with ffmpeg" 1 true
 
   if [ -n "$TIMER" ] && [ "$TIMER" -gt 0 ]; then
-    timer $TIMER
+    timer "$TIMER"
   else
     stop_video_recording_handler
   fi
@@ -308,19 +308,19 @@ function start_video_recording() {
 function delay() {
   case "$INTERFACE" in
     "cli")
-      countdown_cli $1 "recording starts in"
+      countdown_cli "$1" "recording starts in"
       ;;
     "zenity")
-      delay_zenity $1
+      delay_zenity "$1"
       ;;
   esac
 }
 
 function countdown_cli() {
   seconds=$1
-  while [ $seconds -ge 0 ]; do
+  while [ "$seconds" -ge 0 ]; do
     log "\r\033[K\033[0;36m$2:\033[0m $seconds" 0 false false true
-    if [ $seconds -gt 0 ]; then
+    if [ "$seconds" -gt 0 ]; then
       sleep 1
     else 
       log "\r\033[K" 0 false false true
@@ -337,17 +337,17 @@ function delay_zenity() {
       echo $percent
       ((counter-=1))
       sleep 1
-  done | zenity --progress $1 --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
+  done | zenity --progress "$1" --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
   [ $? = 1 ] && log_error "recording canceled by user"
 }
 
 function timer() {
   case "$INTERFACE" in
     "cli")
-      countdown_cli $1 "recording stops in"
+      countdown_cli "$1" "recording stops in"
       ;;
     "zenity")
-      timer_zenity $1
+      timer_zenity "$1"
       ;;
   esac
 }
@@ -360,7 +360,7 @@ function timer_zenity() {
       echo $percent
       ((counter-=1))
       sleep 1
-  done | zenity --progress $1 --no-cancel --auto-close &> /dev/null
+  done | zenity --progress "$1" --no-cancel --auto-close &> /dev/null
 }
 
 function stop_video_recording_handler() {
@@ -412,7 +412,7 @@ function encode_gif_ffmpeg() {
   "${ffmpeg_generate_palette[@]}"
   [ $? = 1 ] && log_error "could not generate color palette from video"
   
-  ffmpeg_encode_gif=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r $FRAMERATE "$TEMP_DIRECTORY/encoded.gif")
+  ffmpeg_encode_gif=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r "$FRAMERATE" "$TEMP_DIRECTORY/encoded.gif")
   [ "$VERBOSITY" -lt "3" ] && ffmpeg_encode_gif+=(-loglevel "quiet")
   
   log "encoding gif using recorded video and generated palette" 2 true
@@ -428,11 +428,11 @@ function encode_gif_gifski() {
   "${ffmpeg[@]}"
   [ $? = 1 ] && log_error "could not separate video frames into individual images"
 
-  gifski=(gifski --fps $FRAMERATE -o "$TEMP_DIRECTORY/encoded.gif")
+  gifski=(gifski --fps "$FRAMERATE" -o "$TEMP_DIRECTORY/encoded.gif")
   [ "$VERBOSITY" -lt "3" ] && gifski+=(--quiet)
-  [ -n "$GIFSKI_QUALITY" ] && gifski+=(--quality $GIFSKI_QUALITY)
+  [ -n "$GIFSKI_QUALITY" ] && gifski+=(--quality "$GIFSKI_QUALITY")
   [ -n "$GIFSKI_FAST" ] && gifski+=(--fast)
-  gifski+=($TEMP_DIRECTORY/frame*.png)
+  gifski+=("$TEMP_DIRECTORY"/frame*.png)
 
   log "encoding gif using separated frames" 2 true
   "${gifski[@]}"
@@ -441,15 +441,16 @@ function encode_gif_gifski() {
 
 function deliver_final_gif() {
   if [ -n "$OUTPUT_FILE" ]; then
-    mv "$TEMP_DIRECTORY/encoded.gif" "$OUTPUT_FILE"
-    [ $? = 0 ] && log_success "final gif saved as \"$OUTPUT_FILE\""
+    mv "$TEMP_DIRECTORY/encoded.gif" "$OUTPUT_FILE" && {
+      log_success "final gif saved as \"$OUTPUT_FILE\""
+    }
   else
     cat "$TEMP_DIRECTORY/encoded.gif"
   fi
 }
 
 function delete_temporary_directory() {
-  rm -r $TEMP_DIRECTORY
+  rm -r "$TEMP_DIRECTORY"
   [ $? = 1 ] && log_error "could not delete temporary directory"
   log "deleted temporary directory $TEMP_DIRECTORY" 2 true
 }
