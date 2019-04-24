@@ -12,7 +12,7 @@ SLOP=0
 QUALITY=70
 DELAY=0
 FRAMERATE=10
-INTERFACE="terminal"
+INTERFACE="cli"
 ENCODER="ffmpeg"
 
 function print_version() {
@@ -60,7 +60,7 @@ OPTIONS
 
     -i, --interface=STRING (default="`echo $INTERFACE`")
         Defines which interface is used for countdown and stop recording.
-        "terminal": the recodring has to be stopped by either pressing ctrl+c, or
+        "cli": the recodring has to be stopped by either pressing ctrl+c, or
         sending a SIGINT to this process (\`killall -INT giph\`).
         "zenity": the recording can be stopped by clicking a button in a window displayed by zenity    
     
@@ -305,8 +305,8 @@ function start_video_recording() {
 
 function stop_video_recording_handler() {
   case "$INTERFACE" in
-    "terminal")
-      stop_recording_handler_terminal
+    "cli")
+      stop_recording_handler_cli
       ;;
     "zenity")
       stop_recording_handler_zenity
@@ -314,7 +314,7 @@ function stop_video_recording_handler() {
   esac
 }
 
-function stop_recording_handler_terminal() {
+function stop_recording_handler_cli() {
   log_info "stop recording with ${BLACK}${ON_CYAN} ctrl+c ${CR} or send INT SIGNAL to this process ${BLACK}${ON_CYAN} killall -int -g capture ${CR}" 
   trap '' INT
 }
@@ -333,8 +333,8 @@ function stop_recording_handler_zenity() {
 
 function countdown() {
   case "$INTERFACE" in
-    "terminal")
-      countdown_terminal $1
+    "cli")
+      countdown_cli $1
       ;;
     "zenity")
       countdown_zenity $1
@@ -342,7 +342,7 @@ function countdown() {
   esac
 }
 
-function countdown_terminal() {
+function countdown_cli() {
   seconds=$1
   while [ $seconds -ge 0 ]; do
 
