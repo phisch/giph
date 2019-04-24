@@ -121,7 +121,7 @@ ON_IBLACK='\033[0;100m';ON_IRED='\033[0;101m';ON_IGREEN='\033[0;102m';ON_IYELLOW
 # color reset
 CR='\033[0m'
 
-# log a message - (message:string, verbosity:int, timestamp:bool, stop_execution:bool, stay_in_line:bool)
+# log a message - (message:string, verbosity:int, timestamp:bool, stop_execution:bool, no_trailing_newline:bool)
 function log() {
   if [ "${2:-1}" -gt "$VERBOSITY" ]; then
     return 0
@@ -291,8 +291,11 @@ function start_video_recording() {
 
   log "started recording video with ffmpeg" 1 true
 
-  # TODO: don't use stop handler when $TIMER is set / implement timer UI
-  stop_video_recording_handler
+  if [ "$TIMER" -gt 0 ]; then
+    timer $TIMER
+  else
+    stop_video_recording_handler
+  fi
 
   wait $FFMPEG_PID
 
@@ -331,30 +334,37 @@ function stop_recording_handler_zenity() {
   fi
 }
 
+function timer() {
+  case "$INTERFACE" in
+    "cli")
+      countdown_cli $1 "recording stops in"
+      ;;
+    "zenity")
+      timer_zenity $1
+      ;;
+  esac
+}
+
+function timer_zenity() {
+  counter=$1
+  while [ "$counter" -ge "0" ]; do
+      percent=$((100-100*counter/$1))
+      echo "#recording stops in $counter"
+      echo $percent
+      ((counter-=1))
+      sleep 1
+  done | zenity --progress $1 --no-cancel --auto-close &> /dev/null
+}
+
 function delay() {
   case "$INTERFACE" in
     "cli")
-      delay_cli $1
+      countdown_cli $1 "recording starts in"
       ;;
     "zenity")
       delay_zenity $1
       ;;
   esac
-}
-
-function delay_cli() {
-  seconds=$1
-  while [ $seconds -ge 0 ]; do
-
-    if [ $seconds -gt 0 ]; then
-      log "${CYAN}recording starts in:${CR}  $seconds ${CLL}" 0 false false true
-      sleep 1
-    else
-      log "${CYAN}recording starts in:${CR}  $seconds" 0
-    fi
-    
-    : $((seconds--))
-  done
 }
 
 function delay_zenity() {
@@ -371,6 +381,19 @@ function delay_zenity() {
   if [ $? = 1 ]; then
     log_error "recording canceled by user"
   fi
+}
+
+function countdown_cli() {
+  seconds=$1
+  while [ $seconds -ge 0 ]; do
+    log "\r\033[K${CYAN}$2:${CR} $seconds" 0 false false true
+    if [ $seconds -gt 0 ]; then
+      sleep 1
+    else 
+      log "\r\033[K" 0 false false true
+    fi
+    : $((seconds--))
+  done
 }
 
 function get_geometry() {
