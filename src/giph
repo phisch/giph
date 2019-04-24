@@ -407,7 +407,6 @@ function parse_geometry_string() {
   fi
 
   log "parsed geometry: width=$width, height=$height, offset_x=$offset_x, offset_y=$offset_y" 2 true
-  exit
 }
 
 function get_geometry_from_slop() {
