@@ -280,7 +280,7 @@ function start_video_recording() {
   ffmpeg+=("$TEMP_DIRECTORY/recording.mkv")
 
   if [ "$DELAY" -gt 0 ]; then
-    countdown $DELAY
+    delay $DELAY
   fi
 
   ffmpeg_command=${ffmpeg[@]}
@@ -331,18 +331,18 @@ function stop_recording_handler_zenity() {
   fi
 }
 
-function countdown() {
+function delay() {
   case "$INTERFACE" in
     "cli")
-      countdown_cli $1
+      delay_cli $1
       ;;
     "zenity")
-      countdown_zenity $1
+      delay_zenity $1
       ;;
   esac
 }
 
-function countdown_cli() {
+function delay_cli() {
   seconds=$1
   while [ $seconds -ge 0 ]; do
 
@@ -357,17 +357,16 @@ function countdown_cli() {
   done
 }
 
-function countdown_zenity() {
-  countdown_time=$1
-  counter=$countdown_time
+function delay_zenity() {
+  counter=$1
 
   while [ "$counter" -ge "0" ]; do
-      percent=$((100-100*counter/countdown_time))
+      percent=$((100-100*counter/$1))
       echo "#recording will start in $counter"
       echo $percent
       ((counter-=1))
       sleep 1
-  done | zenity --progress $countdown_time --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
+  done | zenity --progress $1 --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
 
   if [ $? = 1 ]; then
     log_error "recording canceled by user"
