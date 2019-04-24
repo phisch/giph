@@ -379,7 +379,7 @@ function stop_video_recording_handler() {
 }
 
 function stop_recording_handler_cli() {
-  log_info "stop recording with \033[1;36mctrl+c\033[0m or send INT SIGNAL to this process \033[1;36mkillall -int -g capture\033[0m" 
+  log_info "stop recording with \033[1;36mctrl+c\033[0m or send INT SIGNAL to this process \033[1;36mkillall -int -g giph\033[0m" 
   trap '' INT
 }
 
