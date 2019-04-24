@@ -1,10 +1,11 @@
 .TH GIPH 1 "April 2019" "MIT License" "User Commands"
 .SH NAME
-\fBgiph\fR \- record gif from desktop, window or selection
+giph \- record gif from desktop, window or selection
 .SH SYNOPSIS
-\fBgiph\fR [\fIOPTIONS\fR] [\fIFILENAME\fR]
+.B giph
+.RI [ OPTIONS "] [" FILENAME ]
 .br
-\fBgiph\fR
+.B giph
 [\fB-g\fR \fIGEOMETRY\fR |
 \fB-w\fR \fIINT\fR |
 \fB-s\fR [\fB-l\fR] [\fB-c\fR \fIFLOAT,FLOAT,FLOAT,FLOAT\fR] [\fB-p\fR \fIFLOAT\fR] [\fB-b\fR \fIFLOAT\fR]]
@@ -15,20 +16,22 @@
 [\fB-f\fR \fIINT\fR]
 [\fIFILENAME\fR]
 .SH DESCRIPTION
-\fBgiph\fR is a screen recorder that records the desktop, a window or selection and encodes it into a gif file.
-It prints the encoded gif directly to standard output when omitting [\fIFILENAME\fR].
+.B giph
+is a screen recorder that records the desktop, a window or selection and encodes it into a gif file. It prints the encoded gif directly to standard output when omitting [\fIFILENAME\fR].
 .SH EXAMPLES
 .TP
-\fBgiph -g \fI300x200+600+200 ~/Videos/$(date +%s).png\fR
+.BI "giph -g " "300x200+600+200 ~/Videos/$(date +%s).png"
 Records a 300x200 pixel (width x height) rectangle, that is shifted 600 pixel
 to the right and 200 pixel down from the top-left corner.
 The recording stops when either \fBctrl+c\fR is pressed, or the \fBprocess group is interrupted\fR.
 The encoded gif will be saved in your users Videos directory and has the current timestamp as a name.
 To send an interrupt signal to the process group, you can use:
 .in +2
-\(bu \fBkill -INT -\fIPID\fR
+\(bu
+.BI "kill -INT -" PID
 .br
-\(bu \fBkillall -INT -g \fIgiph\fR
+\(bu
+.BI "killall -INT -g " giph
 .SH OPTIONS
 .TP
 .BR \-h ", " \-\-help
@@ -40,56 +43,64 @@ Print version and exit.
 .BR \-v* ", " \-\-verbose ", " \-\-quiet
 Defines how verbose giph will be. Omitting [\fIFILENAME\fR] will overwrite the verbosity to \fI-1\fR (quiet).  Use the following list to determine which option to use for each verbosity level:
 .in +2
-\(bu \fI-1\fR (quiet) \fB--quiet\fR - logs errors
+\(bu
+.IB "-1 \fR(quiet)" " --quiet \fR - logs errors"
 .br
-\(bu  \fI0\fR (normal) - like quiet, also displays interactive components
+\(bu
+.IB " 0 \fR(normal) - like quiet, also displays interactive components"
 .br
-\(bu  \fI1\fR (verbose) \fB-v\fR, \fB--verbose\fR - like normal, also logs basic information about steps
+\(bu
+.IB " 1 \fR(verbose)" " -v\fR, \fB--verbose" "\fR - like normal, also logs basic information about steps"
 .br
-\(bu  \fI2\fR (very_verbose) \fB-vv\fR - like verbose, also logs detailed information about steps
+\(bu
+.IB " 2 \fR(very_verbose) " -vv "\fR - like verbose, also logs detailed information about steps"
 .br
-\(bu  \fI3\fR (debug) \sp2 \fB-vvv\fR - like very_verbose, also shows output of background processes
+\(bu
+.IB " 3 \fR(debug) " -vvv "\fR - like very_verbose, also shows background process output"
 .TP
 .BR \-s ", " \-\-select
-Uses slop to interactively select the desired region or window to record.
-This uses the \fBSLOP OPTIONS\fR described below.
+Uses slop to interactively select the desired region or window to record. This uses the
+.B SLOP OPTIONS
+described below.
 .TP
-.BR \-g ", " \-\-geometry " " \fIGEOMETRY\fR
+.BR \-g ", " \-\-geometry " " \fIGEOMETRY
 Sets the region to capture.
 .TP
-.BR \-w ", " \-\-window " " \fIINT\fR
+.BR \-w ", " \-\-window " " \fIINT
 Sets the window id of the desired window to capture.
 .TP
 .BR \-i ", " \-\-interface " \fISTRING\fR (default: \fIcli\fR)"
-Selects the user interface method that is used for countdown, timer and to stop the recording.
-The possible values are:
+Selects the user interface method that is used for countdown, timer and to stop the recording. The possible values are:
 .in +2
-\(bu \fIcli\fR: uses the terminal as a user interface
+\(bu
+.IR cli ": uses the terminal as a user interface"
 .br
-\(bu \fIzenity\fR: displays control-windows using zenity
+\(bu
+.IR zenity ": displays control-windows using zenity"
 .TP
 .BR \-e ", " \-\-encoder " \fISTRING\fR (default: \fIffmpeg\fR)"
 Selects one of the following encoders uses to encode the gif:
 .in +2
-\(bu \fIffmpeg\fR: high quality gif encoder
+\(bu
+.IR ffmpeg ": high quality gif encoder"
 .br
-\(bu \fIgifski\fR: highest quality gif encoder, rather slow, uses \fBGIFSKI OPTIONS\fR described below
+\(bu
+.IR gifski ": highest quality gif encoder, rather slow, uses \fBGIFSKI OPTIONS\fR described below"
 .TP
-.BR \-d ", " \-\-delay " " \fIINT\fR
+.BR \-d ", " \-\-delay " " \fIINT
 Sets the time in seconds to wait before the recording starts.
 .TP
-.BR \-t ", " \-\-timer " " \fITIMEDURATION\fR
-Sets a fixed time to record. The format is a timeduration as described in the ffmpeg documentation
-(https://ffmpeg.org/ffmpeg-utils.html#Time-duration).
-As an example, '10' would mean 10 seconds, '3:30' means 3 minutes and 30 seconds,
-'1:02:03' means 1 hour, 2 minutes and 3 seconds, and '5.5' means 5.5 seconds.
+.BR \-t ", " \-\-timer " " \fITIMEDURATION
+Sets a fixed time to record. The format is a timeduration as described in the ffmpeg documentation (https://ffmpeg.org/ffmpeg-utils.html#Time-duration). As an example, '10' would mean 10 seconds, '3:30' means 3 minutes and 30 seconds, '1:02:03' means 1 hour, 2 minutes and 3 seconds, and '5.5' means 5.5 seconds.
 .TP
-.BR \-f ", " \-\-framerate " " \fIINT\fR
+.BR \-f ", " \-\-framerate " " \fIINT
 Sets the desired framerate of the recorded gif. A higher framerate will result in a larger filesize.
 .SH SLOP OPTIONS
-When \fB-s\fR or \fB--select\fR is used, slop will be used to get geometry information.
-For a more detailed description of slops options, see \fBslop(1)\fR.
-The following options will be passed to slop if they are set:
+When
+.BR -s " or " --select
+is used, slop will be used to get geometry information. Read
+.B slop(1)
+for more detailed information about slop options. The following options will be passed to slop if they are set:
 .TP
 .BR \-b ", " \-\-bordersize " \fIFLOAT\fR (default: \fI1\fR)"
 Set the selection border thickness.
@@ -107,11 +118,10 @@ Set the selection color as RGB or ARGB.
 Set a shader to be used.
 .TP
 .BR \-n ", " \-\-nodecorations " \fIINT\fR (default: \fI0\fR)"
-Tries to select child windows. \fI0\fR is off, \fI1\fR tries to remove decorations,
-\fI2\fR aggressively tries to remove decorations.
+.RI "Tries to select child windows. " 0 " is off, " 1 " tries to remove decorations, " 2 " aggressively tries to remove decorations."
 .TP
 .BR \-l ", " \-\-highlight
-Highlight the selection rectangle. This uses the color provided in \fB-c\fR or \fB--color\fR.
+.RB "Highlight the selection rectangle. This uses the color provided in " -c " or " --color "."
 .TP
 .BR \-k ", " \-\-nokeyboard
 Disable being able to cancel the selection using the keyboard.
@@ -119,13 +129,16 @@ Disable being able to cancel the selection using the keyboard.
 .BR \-o ", " \-\-noopengl
 Disable graphics acceleration.
 .SH GIFSKI OPTIONS
-When \fB-e\fR or \fB--encoder\fR \fIgifski\fR is used, gifski will be used as the gif encoder.
-The following options will be passed to gifski if they are set: 
+When
+.BR -e " or " --encoder
+.I gifski
+is used, gifski will be used as the gif encoder. The following options will be passed to gifski if they are set: 
 .TP
 .BR \-q ", " \-\-quality " \fIINT\fR (default: \fI80\fR)"
-Set the quality from 1 to 100, where 1 is the lowest, and 100 the best quality.
+Set the quality from
+.RI "Set the quality from " 1 " to " 100 ", where 1 is the lowest, and 100 the best quality."
 .TP
 .BR \-f ", " \-\-fast
 Makes the encoding 3 times faster. Results in 10% lower quality and a bigger filesize though.
 .SH SEE ALSO
-.BR slop(1)
+.B slop(1)
