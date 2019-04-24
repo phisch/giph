@@ -27,7 +27,7 @@ And finally install giph:
 
 ```bash
 $ cd giph
-$ make install
+$ sudo make install
 ```
 
 ## Examples
