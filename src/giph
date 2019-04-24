@@ -376,24 +376,25 @@ function countdown_zenity() {
 
 function get_geometry() {
   if [ $SLOP = 1 ]; then
+    log "using slop to determine recording geometry" 1 true
     get_geometry_from_slop
   elif [ -n "$GEOMETRY" ]; then
+    log "using provided geometry string" 1 true
     get_geometry_from_string
   elif [ -n "$WINDOW" ]; then
+    log "determining geometry from provided window id" 1 true
     get_geometry_from_window_id
   else
+    log "determining desktop geometry" 1 true
     get_geometry_for_desktop
   fi
 
-  log_info "Geometry string: $GEOMETRY_STRING"
+  log "geometry string: $GEOMETRY_STRING" 2 true
 
   parse_geometry_string
 }
 
 function parse_geometry_string() {
-  # todo: error out if this doesn't return values
-  # todo: implement using geometry relative to a parent (this is when the + and - will be important)
-  #[[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)([+-][0-9]+)([+-][0-9]+) ]] 
   [[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)[+-]([0-9]+)[+-]([0-9]+) ]] 
 
   width=${BASH_REMATCH[1]}
@@ -401,12 +402,15 @@ function parse_geometry_string() {
   offset_x=${BASH_REMATCH[3]}
   offset_y=${BASH_REMATCH[4]}
 
-  log "width=$width, height=$height, offset_x=$offset_x, offset_y=$offset_y"
+  if [ -z "$width" ] || [ -z "$height" ] || [ -z "$offset_x" ] || [ -z "$offset_y" ]; then
+    log_error "could not parse geometry string '$GEOMETRY_STRING'"
+  fi
+
+  log "parsed geometry: width=$width, height=$height, offset_x=$offset_x, offset_y=$offset_y" 2 true
+  exit
 }
 
 function get_geometry_from_slop() {
-  log "using slop to determine recording geometry" 1 true
-
   slop=(slop -f "%g")
 
   if [ -n "$SLOP_HIGHLIGHT" ]; then
@@ -442,12 +446,10 @@ function get_geometry_from_slop() {
 }
 
 function get_geometry_from_string() {
-  log "using provided geometry" 1 true
   GEOMETRY_STRING=$GEOMETRY
 }
 
 function get_geometry_from_window_id() {
-  log "determining geometry from provided window id" 1 true
   xwininfo -id $WINDOW &> /dev/null
 
   if [ $? = 1 ]; then
@@ -458,7 +460,6 @@ function get_geometry_from_window_id() {
 }
 
 function get_geometry_for_desktop() {
-  log "determining desktop geometry" 1 true
   GEOMETRY_STRING="$(xwininfo -root | grep 'geometry' | awk '{print $2;}')"
 }
 
