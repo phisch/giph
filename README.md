@@ -3,6 +3,12 @@ giph is a screen recorder that records the desktop, a window or selection and en
 
 ## Installation
 
+### Arch
+
+```bash
+$ yay -S giph-git
+```
+
 ### From source
 
 Make sure to install the following dependencies:
