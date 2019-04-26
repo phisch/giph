@@ -25,7 +25,8 @@ SYNOPSIS
     giph [OPTIONS] [FILENAME]
 
 DESCRIPTION
-  giph is a screen recorder that records the desktop, a window or selection and encodes it into a gif file. It prints the encoded gif directly to standard output when omitting [FILENAME].
+  giph is a screen recorder that records the desktop, a window or selection and encodes it into a gif file.
+  It prints the encoded gif directly to standard output when omitting [FILENAME].
 
 OPTIONS
   -h,  --help                 Print help and exit.
@@ -200,15 +201,14 @@ function get_geometry() {
     get_geometry_from_string
   elif [ -n "$WINDOW" ]; then
     log "determining geometry from provided window id" 1 true
-    get_geometry_from_window_id
+    get_geometry_from_window_id "$WINDOW"
   else
     log_warning "no method to provide geometry given, using full desktop geometry instead"
     log "determining desktop geometry" 1 true
     get_geometry_for_desktop
   fi
 
-  log "geometry string: $GEOMETRY_STRING" 2 true
-
+  log "geometry string: '$GEOMETRY_STRING'" 2 true
   parse_geometry_string
 }
 
@@ -239,17 +239,24 @@ function get_geometry_from_string() {
 }
 
 function get_geometry_from_window_id() {
-  xwininfo -id "$WINDOW" &> /dev/null
-  [ $? = 1 ] && log_error "window with id $WINDOW does not exist"
-  GEOMETRY_STRING="$(xwininfo -id "$WINDOW" | grep 'geometry' | awk '{print $2;}')"
+  xdotool_output=$(xdotool getwindowgeometry --shell "$1" 2> /dev/null)
+  [ $? = 1 ] && log_error "window with id $1 does not exist"
+
+  eval "$xdotool_output"
+
+  [[ $X != "-"* ]] && X="+$X"
+  [[ $Y != "-"* ]] && Y="+$Y"
+
+  GEOMETRY_STRING="${WIDTH}x${HEIGHT}${X}${Y}"
 }
 
 function get_geometry_for_desktop() {
-  GEOMETRY_STRING="$(xwininfo -root | grep 'geometry' | awk '{print $2;}')"
+  root_window_id=$(xdotool search --maxdepth 0 --class '')
+  get_geometry_from_window_id "$root_window_id"
 }
 
 function parse_geometry_string() {
-  [[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)[+-]([0-9]+)[+-]([0-9]+) ]] 
+  [[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)[+]?([+-][0-9]+)[+]?([+-][0-9]+) ]] 
 
   width=${BASH_REMATCH[1]}
   height=${BASH_REMATCH[2]}
@@ -258,6 +265,16 @@ function parse_geometry_string() {
 
   [ -z "$width" ] || [ -z "$height" ] || [ -z "$offset_x" ] || [ -z "$offset_y" ] && {
     log_error "could not parse geometry string '$GEOMETRY_STRING'"
+  }
+
+  [ "$offset_x" -lt 0 ] && {
+    width=$((width+offset_x))
+    offset_x="+0"
+  }
+  
+  [ "$offset_y" -lt 0 ] && {
+    height=$((height+offset_y))
+    offset_y="+0"
   }
 
   log "parsed geometry: width=$width, height=$height, offset_x=$offset_x, offset_y=$offset_y" 2 true
@@ -274,7 +291,7 @@ function start_video_recording() {
   ffmpeg+=(-f x11grab)
   ffmpeg+=(-framerate "$FRAMERATE")
   ffmpeg+=(-s "$width"x"$height")
-  ffmpeg+=(-i :0.0+"$offset_x","$offset_y")
+  ffmpeg+=(-i :0.0"$offset_x","$offset_y")
   ffmpeg+=(-preset ultrafast)
   ffmpeg+=(-crf 0)
 

@@ -14,12 +14,11 @@ $ yay -S giph-git
 Make sure to install the following dependencies:
 
  - ffmpeg
- - grep
- - awk
 
 Optionally, install the following dependencies:
+
  - slop (`--select`)
- - xwininfo (`--window` or desktop recording)
+ - xdotool (`--window` or desktop recording)
  - zenity (`--interface zenity`)
  - gifski (`--encoder gifski`)
 
