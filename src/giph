@@ -12,7 +12,6 @@ SLOP=0
 DELAY=0
 FRAMERATE=15
 INTERFACE="cli"
-ENCODER="ffmpeg"
 
 function print_version() {
   echo $VERSION
@@ -35,11 +34,10 @@ OPTIONS
   -s,  --select               Enable slop selection.
   -g,  --geometry=STRING      Record rectangle by geometry. (like 100x300+0+0)
   -w,  --window=INT           Record window by id.
-  -d,  --delay=INT            Time in seconds before the recording starts. 
+  -d,  --delay=INT            Time in seconds before the recording starts.
   -t,  --timer=TIMEDURATION   Time of the recording. (e.g. 10 for 10 seconds or 1:30 for 1 minute 30 seconds)
   -f,  --framerate=INT        Set the framerate.
-  -i,  --interface=STRING     Set the user interface that should be used. ("cli" or "zenity")    
-  -e,  --encoder=STRING       Set the encoder that should be used. ("ffmpeg" or "gifski")
+  -i,  --interface=STRING     Set the user interface that should be used. ("cli" or "zenity")
 
 SLOP OPTIONS
   -b, --bordersize=FLOAT                Set the selection border thickness.
@@ -51,10 +49,6 @@ SLOP OPTIONS
   -l, --highlight                       Highlight the selection rectangle.
   -k, --nokeyboard                      Disable cancel through keypress.
   -o, --noopengl                        Disable graphics acceleration.
-
-GIFSKI OPTIONS
-  -gq, --gifski-quality=INT   Set the desired gifski quality from 1 to 100.
-  -gf, --gifski-fast          3 times faster encoding, 10% lower quality, larger filesize.
 EOF
 
   exit 0
@@ -138,10 +132,6 @@ while [[ "$1" == -* ]]; do
     shift
     INTERFACE="$1"
     ;;
-  -e|--encoder)
-    shift
-    ENCODER="$1"
-    ;;
   -b|--bordersize)
     shift
     SLOP_BORDERSIZE="$1"
@@ -174,13 +164,6 @@ while [[ "$1" == -* ]]; do
     ;;
   -o|--noopengl)
     SLOP_NOOPENGL=true
-    ;;
-  -gq|--gifski-quality)
-    shift
-    GIFSKI_QUALITY="$1"
-    ;;
-  -gf|--gifski-fast)
-    GIFSKI_FAST=true
     ;;
   -*)
     log_error "option '$1' does not exist" false
@@ -408,20 +391,8 @@ function stop_recording_handler_zenity() {
   fi
 }
 
-function encode_gif() {
-  case "$ENCODER" in
-    "ffmpeg")
-      log "encoding gif using ffmpeg encoder" 1 true
-      encode_gif_ffmpeg
-      ;;
-    "gifski")
-      log "encoding gif using gifski encoder" 1 true
-      encode_gif_gifski
-      ;;
-  esac
-}
-
 function encode_gif_ffmpeg() {
+  log "encoding gif using ffmpeg encoder" 1 true
   ffmpeg_generate_palette=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -vf palettegen "$TEMP_DIRECTORY/palette.png")
   [ "$VERBOSITY" -lt "3" ] && ffmpeg_generate_palette+=(-loglevel "quiet")
   
@@ -435,25 +406,6 @@ function encode_gif_ffmpeg() {
   log "encoding gif using recorded video and generated palette" 2 true
   "${ffmpeg_encode_gif[@]}"
   [ $? = 1 ] && log_error "could not encode gif from video and color palette"
-}
-
-function encode_gif_gifski() {
-  ffmpeg=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" "$TEMP_DIRECTORY/frame%04d.png")
-  [ "$VERBOSITY" -lt "3" ] && ffmpeg+=(-loglevel "quiet")
-  
-  log "separating video frames into individual images" 2 true
-  "${ffmpeg[@]}"
-  [ $? = 1 ] && log_error "could not separate video frames into individual images"
-
-  gifski=(gifski --fps "$FRAMERATE" -o "$TEMP_DIRECTORY/encoded.gif")
-  [ "$VERBOSITY" -lt "3" ] && gifski+=(--quiet)
-  [ -n "$GIFSKI_QUALITY" ] && gifski+=(--quality "$GIFSKI_QUALITY")
-  [ -n "$GIFSKI_FAST" ] && gifski+=(--fast)
-  gifski+=("$TEMP_DIRECTORY"/frame*.png)
-
-  log "encoding gif using separated frames" 2 true
-  "${gifski[@]}"
-  [ $? = 1 ] && log_error "could not encode gif using separated frames"
 }
 
 function deliver_final_gif() {
@@ -476,7 +428,7 @@ function giph() {
   get_geometry
   create_temporary_directory
   start_video_recording
-  encode_gif
+  encode_gif_ffmpeg
   deliver_final_gif
   delete_temporary_directory
   exit 0

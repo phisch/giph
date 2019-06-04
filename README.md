@@ -20,7 +20,6 @@ Optionally, install the following dependencies:
  - slop (`--select`)
  - xdotool (`--window` or desktop recording)
  - zenity (`--interface zenity`)
- - gifski (`--encoder gifski`)
 
 Clone the giph repository:
 

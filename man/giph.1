@@ -10,7 +10,6 @@ giph \- record gif from desktop, window or selection
 \fB-w\fR \fIINT\fR |
 \fB-s\fR [\fB-l\fR] [\fB-c\fR \fIFLOAT,FLOAT,FLOAT,FLOAT\fR] [\fB-p\fR \fIFLOAT\fR] [\fB-b\fR \fIFLOAT\fR]]
 [\fB-i\fR \fIINTERFACE\fR]
-[\fB-e\fR \fIENCODER\fR [=\fIgifski\fR \fB-q\fR \fIINT\fR]]
 [\fB-d\fR \fIINT\fR]
 [\fB-t\fR \fIINT\fR]
 [\fB-f\fR \fIINT\fR]
@@ -86,15 +85,6 @@ Selects the user interface method that is used for countdown, timer and to stop 
 .br
 \(bu
 .IR zenity ": displays control-windows using zenity"
-.TP
-.BR \-e ", " \-\-encoder " \fISTRING\fR (default: \fIffmpeg\fR)"
-Selects one of the following encoders uses to encode the gif:
-.in +2
-\(bu
-.IR ffmpeg ": high quality gif encoder"
-.br
-\(bu
-.IR gifski ": highest quality gif encoder, rather slow, uses \fBGIFSKI OPTIONS\fR described below"
 .SH SLOP OPTIONS
 When
 .BR -s " or " --select
@@ -128,17 +118,5 @@ Disable being able to cancel the selection using the keyboard.
 .TP
 .BR \-o ", " \-\-noopengl
 Disable graphics acceleration.
-.SH GIFSKI OPTIONS
-When
-.BR -e " or " --encoder
-.I gifski
-is used, gifski will be used as the gif encoder. The following options will be passed to gifski if they are set: 
-.TP
-.BR \-gq ", " \-\-gifski-quality
-Set the quality from
-.RI "Set the quality from " 1 " to " 100 ", where 1 is the lowest, and 100 the best quality."
-.TP
-.BR \-gf ", " \-\-gifski-fast
-Makes the encoding 3 times faster. Results in 10% lower quality and a bigger filesize though.
 .SH SEE ALSO
 .B slop(1)
