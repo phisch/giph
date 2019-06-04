@@ -239,28 +239,42 @@ function get_geometry_for_desktop() {
 }
 
 function parse_geometry_string() {
-  [[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)[+]?([+-][0-9]+)[+]?([+-][0-9]+) ]] 
+  [[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)[+]?([-]?[0-9]+)[+]?([-]?[0-9]+) ]] 
 
   width=${BASH_REMATCH[1]}
   height=${BASH_REMATCH[2]}
-  offset_x=${BASH_REMATCH[3]}
-  offset_y=${BASH_REMATCH[4]}
+  x=${BASH_REMATCH[3]}
+  y=${BASH_REMATCH[4]}
 
-  [ -z "$width" ] || [ -z "$height" ] || [ -z "$offset_x" ] || [ -z "$offset_y" ] && {
+  [ -z "$width" ] || [ -z "$height" ] || [ -z "$x" ] || [ -z "$y" ] && {
     log_error "could not parse geometry string '$GEOMETRY_STRING'"
   }
 
-  [ "$offset_x" -lt 0 ] && {
-    width=$((width+offset_x))
-    offset_x="+0"
-  }
-  
-  [ "$offset_y" -lt 0 ] && {
-    height=$((height+offset_y))
-    offset_y="+0"
+  get_geometry_for_desktop
+
+  [ "$x" -gt "$WIDTH" ] || [ $((x + width)) -lt 0 ] || [ "$y" -gt "$HEIGHT" ] || [ $((y + height)) -lt 0  ] && {
+    log_error "the area to record is fully outside of the root window"
   }
 
-  log "parsed geometry: width=$width, height=$height, offset_x=$offset_x, offset_y=$offset_y" 2 true
+  [ "$x" -lt 0 ] && {
+    width=$((width + x))
+    x="0"
+  }
+  
+  [ "$y" -lt 0 ] && {
+    height=$((height + y))
+    y="0"
+  }
+
+  [ $((x+width)) -gt "$WIDTH" ] && {
+    let width-=$((x + width - WIDTH))
+  }
+
+  [ $((y+height)) -gt "$HEIGHT" ] && {
+    let height-=$((y + height - HEIGHT))
+  }
+
+  log "parsed geometry: width=$width, height=$height, x=$x, y=$y" 2 true
 }
 
 function create_temporary_directory() {
@@ -274,7 +288,7 @@ function start_video_recording() {
   ffmpeg+=(-f x11grab)
   ffmpeg+=(-framerate "$FRAMERATE")
   ffmpeg+=(-s "$width"x"$height")
-  ffmpeg+=(-i :0.0"$offset_x","$offset_y")
+  ffmpeg+=(-i :0.0+"$x","$y")
   ffmpeg+=(-preset ultrafast)
   ffmpeg+=(-crf 0)
 
