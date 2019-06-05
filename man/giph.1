@@ -9,7 +9,6 @@ giph \- record gif from desktop, window or selection
 [\fB-g\fR \fIGEOMETRY\fR |
 \fB-w\fR \fIINT\fR |
 \fB-s\fR [\fB-l\fR] [\fB-c\fR \fIFLOAT,FLOAT,FLOAT,FLOAT\fR] [\fB-p\fR \fIFLOAT\fR] [\fB-b\fR \fIFLOAT\fR]]
-[\fB-i\fR \fIINTERFACE\fR]
 [\fB-d\fR \fIINT\fR]
 [\fB-t\fR \fIINT\fR]
 [\fB-f\fR \fIINT\fR]
@@ -76,15 +75,6 @@ Sets a fixed time to record. The format is a timeduration as described in the ff
 .TP
 .BR \-f ", " \-\-framerate " \fIINT\fR (default: \fI15\fR)"
 Sets the desired framerate of the recorded gif. A higher framerate will result in a larger filesize.
-.TP
-.BR \-i ", " \-\-interface " \fISTRING\fR (default: \fIcli\fR)"
-Selects the user interface method that is used for countdown, timer and to stop the recording. The possible values are:
-.in +2
-\(bu
-.IR cli ": uses the terminal as a user interface"
-.br
-\(bu
-.IR zenity ": displays control-windows using zenity"
 .TP
 .BR \-y ", " \-\-notify
 Uses notify-send to send an urgent notification if an error happens, or a normal notification when the final gif was saved successfully.

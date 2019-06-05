@@ -20,7 +20,6 @@ Optionally, install the following dependencies:
 
  - slop (`--select`)
  - libnotify (`--notify`)
- - zenity (`--interface zenity`)
 
 Clone the giph repository:
 

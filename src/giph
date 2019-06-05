@@ -11,7 +11,6 @@ VERBOSITY=0
 SLOP=0
 DELAY=0
 FRAMERATE=15
-INTERFACE="cli"
 
 function print_version() {
   echo $VERSION
@@ -37,7 +36,6 @@ OPTIONS
   -d,  --delay=INT            Time in seconds before the recording starts.
   -t,  --timer=TIMEDURATION   Time of the recording. (e.g. 10 for 10 seconds or 1:30 for 1 minute 30 seconds)
   -f,  --framerate=INT        Set the framerate.
-  -i,  --interface=STRING     Set the user interface that should be used. ("cli" or "zenity")
   -y,  --notify               Send notification on error or success.
 
 SLOP OPTIONS
@@ -139,10 +137,6 @@ while [[ "$1" == -* ]]; do
   -f|--framerate)
     shift
     FRAMERATE="$1"
-    ;;
-  -i|--interface)
-    shift
-    INTERFACE="$1"
     ;;
   -y|--notify)
     NOTIFY=1
@@ -312,7 +306,7 @@ function start_video_recording() {
 
   ffmpeg+=("$TEMP_DIRECTORY/recording.mkv")
 
-  [ -n "$DELAY" ] && [ "$DELAY" -gt 0 ] && delay "$DELAY"
+  [ -n "$DELAY" ] && [ "$DELAY" -gt 0 ] && countdown_cli "$DELAY" "recording starts in"
 
   ffmpeg_command=${ffmpeg[*]}
   log "ffmpeg command: '$ffmpeg_command'" 2 true
@@ -323,26 +317,15 @@ function start_video_recording() {
   log "started recording video with ffmpeg" 1 true
 
   if [ -n "$TIMER" ] && [ "$TIMER" -gt 0 ]; then
-    timer "$TIMER"
+    countdown_cli "$TIMER" "recording stops in"
   else
-    stop_video_recording_handler
+    stop_recording_handler_cli
   fi
 
   wait $FFMPEG_PID
 
   [ $? = 1 ] && log_error "recording video with ffmpeg failed"
   log "completed ffmpeg video recording" 1 true
-}
-
-function delay() {
-  case "$INTERFACE" in
-    "cli")
-      countdown_cli "$1" "recording starts in"
-      ;;
-    "zenity")
-      delay_zenity "$1"
-      ;;
-  esac
 }
 
 function countdown_cli() {
@@ -358,66 +341,9 @@ function countdown_cli() {
   done
 }
 
-function delay_zenity() {
-  counter=$1
-  while [ "$counter" -ge "0" ]; do
-      percent=$((100-100*counter/$1))
-      echo "#recording will start in $counter"
-      echo $percent
-      ((counter-=1))
-      sleep 1
-  done | zenity --progress "$1" --no-cancel --extra-button="Cancel" --auto-close &> /dev/null
-  [ $? = 1 ] && log_error "recording canceled by user"
-}
-
-function timer() {
-  case "$INTERFACE" in
-    "cli")
-      countdown_cli "$1" "recording stops in"
-      ;;
-    "zenity")
-      timer_zenity "$1"
-      ;;
-  esac
-}
-
-function timer_zenity() {
-  counter=$1
-  while [ "$counter" -ge "0" ]; do
-      percent=$((100-100*counter/$1))
-      echo "#recording stops in $counter"
-      echo $percent
-      ((counter-=1))
-      sleep 1
-  done | zenity --progress "$1" --no-cancel --auto-close &> /dev/null
-}
-
-function stop_video_recording_handler() {
-  case "$INTERFACE" in
-    "cli")
-      stop_recording_handler_cli
-      ;;
-    "zenity")
-      stop_recording_handler_zenity
-      ;;
-  esac
-}
-
 function stop_recording_handler_cli() {
   log_info "stop recording with \033[1;36mctrl+c\033[0m or send INT SIGNAL to this process \033[1;36mkillall -int -g giph\033[0m" 
   trap '' INT
-}
-
-function stop_recording_handler_zenity() {
-  zenity --question --cancel-label "Cancel" --ok-label "Stop" --text "\n<big>recording...</big>" --icon-name media-record &> /dev/null
-  zenity_return=$?
-
-  kill -INT $FFMPEG_PID
-
-  if [ $zenity_return = 1 ]; then
-    wait $FFMPEG_PID
-    log_error "video recording canceled by user"
-  fi
 }
 
 function encode_gif_ffmpeg() {
