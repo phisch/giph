@@ -38,6 +38,7 @@ OPTIONS
   -t,  --timer=TIMEDURATION   Time of the recording. (e.g. 10 for 10 seconds or 1:30 for 1 minute 30 seconds)
   -f,  --framerate=INT        Set the framerate.
   -i,  --interface=STRING     Set the user interface that should be used. ("cli" or "zenity")
+  -y,  --notify               Send notification on error or success.
 
 SLOP OPTIONS
   -b, --bordersize=FLOAT                Set the selection border thickness.
@@ -68,6 +69,7 @@ function log() {
 }
 
 function log_error() {
+  notify "$1" "critical"
   log "\033[0;31mERROR:\033[0m $1" -1 "${2:-true}" true
 }
 
@@ -76,11 +78,21 @@ function log_warning() {
 }
 
 function log_success() {
+  notify "$1" "normal"
   log "\033[0;32mSUCCESS:\033[0m $1" 0 "${2:-true}"
 }
 
 function log_info() {
   log "\033[0;36mINFO:\033[0m $1" 0 "${2:-true}"
+}
+
+function notify() {
+  [ "$NOTIFY" = 1 ] && {
+    notify=(notify-send -t 3000)
+    notify+=(-u "$2")
+    notify+=("giph" "$1")
+    "${notify[@]}"
+  }
 }
 
 if [ -z "$1" ]; then
@@ -131,6 +143,9 @@ while [[ "$1" == -* ]]; do
   -i|--interface)
     shift
     INTERFACE="$1"
+    ;;
+  -y|--notify)
+    NOTIFY=1
     ;;
   -b|--bordersize)
     shift

@@ -14,11 +14,12 @@ $ yay -S giph-git
 Make sure to install the following dependencies:
 
  - ffmpeg
+ - xdotool
 
 Optionally, install the following dependencies:
 
  - slop (`--select`)
- - xdotool (`--window` or desktop recording)
+ - libnotify (`--notify`)
  - zenity (`--interface zenity`)
 
 Clone the giph repository:
