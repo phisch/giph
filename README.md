@@ -24,8 +24,9 @@ Records a 100x200 pixel rectangle in the top left corner of the screen. The reco
 ### Arch
 
 ```bash
-$ yay -S giph-git
+$ yay -S giph
 ```
+Or install [giph-git](https://aur.archlinux.org/packages/giph-git/) to get the latest development version.
 
 ### From source
 
