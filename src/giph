@@ -37,6 +37,7 @@ OPTIONS
   -t,  --timer=TIMEDURATION   Time of the recording. (e.g. 10 for 10 seconds or 1:30 for 1 minute 30 seconds)
   -f,  --framerate=INT        Set the framerate.
   -y,  --notify               Send notification on error or success.
+       --stop                 Finish any running giph recordings.
 
 SLOP OPTIONS
   -b, --bordersize=FLOAT                Set the selection border thickness.
@@ -114,6 +115,9 @@ while [[ "$1" == -* ]]; do
     ;;
   --quiet)
     VERBOSITY=-1
+    ;;
+  --stop)
+    SHOULD_STOP=true
     ;;
   -s|--select)
     SLOP=1
@@ -341,10 +345,12 @@ function countdown_cli() {
   done
 }
 
+
 function stop_recording_handler_cli() {
-  log_info "stop recording with \033[1;36mctrl+c\033[0m or send INT SIGNAL to this process \033[1;36mkillall -int -g giph\033[0m" 
+  log_info "stop recording with \033[1;36mctrl+c\033[0m or call \033[1;36mgiph --stop\033[0m"
   trap '' INT
 }
+
 
 function encode_gif_ffmpeg() {
   log "encoding gif using ffmpeg encoder" 1 true
@@ -389,5 +395,15 @@ function giph() {
   exit 0
 }
 
-giph
+function stop_all_recordings() {
+  for pid in $(pgrep giph); do
+    kill -INT -"$pid"
+  done
+}
+
+if [ -n "$SHOULD_STOP" ]; then
+  stop_all_recordings
+else
+  giph
+fi
 wait
