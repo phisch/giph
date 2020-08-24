@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 stty -echoctl # don't print ^C when pressing ctrl+c
 
@@ -238,6 +238,9 @@ function get_geometry_from_window_id() {
   xdotool_output=$(xdotool getwindowgeometry --shell "$1" 2> /dev/null)
   [ $? = 1 ] && log_error "window with id $1 does not exist"
 
+  WIDTH=0
+  HEIGHT=0
+
   eval "$xdotool_output"
 
   [[ $X != "-"* ]] && X="+$X"
@@ -280,11 +283,11 @@ function parse_geometry_string() {
   }
 
   [ $((x+width)) -gt "$WIDTH" ] && {
-    let width-=$((x + width - WIDTH))
+    width-=$((x + width - WIDTH))
   }
 
   [ $((y+height)) -gt "$HEIGHT" ] && {
-    let height-=$((y + height - HEIGHT))
+    height-=$((y + height - HEIGHT))
   }
 
   log "parsed geometry: width=$width, height=$height, x=$x, y=$y" 2 true
@@ -301,7 +304,7 @@ function start_video_recording() {
   ffmpeg+=(-f x11grab)
   ffmpeg+=(-framerate "$FRAMERATE")
   ffmpeg+=(-s "$width"x"$height")
-  ffmpeg+=(-i :0.0+"$x","$y")
+  ffmpeg+=(-i ":0.0+$x,$y")
   ffmpeg+=(-preset ultrafast)
   ffmpeg+=(-crf 0)
 
