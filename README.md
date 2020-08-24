@@ -11,7 +11,8 @@ Command used in this demo: `giph -s -l -c 0.3,0,0.6,0.3 ~/Videos/$(date +%s).gif
 ```bash
 $ giph -s -l -c 1,1,1,0.3 -b 5 -p -5 out.gif 
 ```
-Select a window or area with slop. The selection rectangle is highlighted in a transparent blue color abd has a 5px border on the inside. After stopping the recording with either `ctrl+c` or by sending a `SIGINT` to the processgroup, the resulting gif is written to `out.gif`.
+Select a window or area with slop. The selection rectangle is highlighted in a transparent blue color abd has a 5px border on the inside. 
+After stopping the recording with either `ctrl+c`, by running `giph --stop` or by sending a `SIGINT` to the processgroup, the resulting gif is written to `out.gif`.
 
 
 ```bash
@@ -39,6 +40,7 @@ Optionally, install the following dependencies:
 
  - slop (`--select`)
  - libnotify (`--notify`)
+ - pgrep (`--stop`)
 
 Clone the giph repository:
 

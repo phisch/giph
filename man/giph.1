@@ -21,19 +21,17 @@ is a screen recorder that records the desktop, a window or selection and encodes
 .BI "giph -g " "300x200+600+200 ~/Videos/$(date +%s).png"
 Records a 300x200 pixel (width x height) rectangle, that is shifted 600 pixel to the right and 200 pixel down from the top-left corner. The recording stops when either 
 .B ctrl+c
-is pressed, or the 
-.BR "process group is interrupted" .
-The encoded gif will be saved in your users Videos directory and has the current timestamp as a name. To send an interrupt signal to the process group, you can use:
-.in +2
-\(bu
-.BI "kill -INT -" PID
+is pressed, or after calling
+.B giph --stop.
 .br
-\(bu
-.BI "killall -INT -g " giph
+The encoded gif will be saved in your users videos directory and has the current timestamp as a name.
 .SH OPTIONS
 .TP
 .BR \-h ", " \-\-help
 Print help and exit.
+.TP
+.BR \-\-stop
+Finish any running giph recordings
 .TP
 .BR \-\-version
 Print version and exit.
