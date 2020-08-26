@@ -9,6 +9,8 @@ VERBOSITY=0
 
 # options
 SLOP=0
+AUDIO=0
+MICROPHONE=0
 DELAY=0
 FRAMERATE=15
 
@@ -142,6 +144,15 @@ while [[ "$1" == -* ]]; do
     shift
     FRAMERATE="$1"
     ;;
+  --format)
+    #TODO: implement hard overwrite
+    ;;
+  -a|--audio)
+    AUDIO=1
+    ;;
+  -m|--microphone)
+    MICROPHONE=1
+    ;;
   -y|--notify)
     NOTIFY=1
     ;;
@@ -187,6 +198,13 @@ done
 
 # set verbosity to -1 if the file should be printed to stdout
 [ -n "$1" ] && OUTPUT_FILE=$1 || VERBOSITY=-1
+
+case "$OUTPUT_FILE" in
+    *.webm) FORMAT="webm" ;;
+    *.mp4)  FORMAT="mp4" ;;
+    *.mkv)  FORMAT="mkv" ;;
+    *)      FORMAT="gif" ;;
+esac
 
 function get_geometry() {
   if [ $SLOP = 1 ]; then
@@ -299,25 +317,61 @@ function create_temporary_directory() {
   log "created temporary directory $TEMP_DIRECTORY" 2 true
 }
 
-function start_video_recording() {
-  ffmpeg=(ffmpeg)
-  ffmpeg+=(-f x11grab)
-  ffmpeg+=(-framerate "$FRAMERATE")
-  ffmpeg+=(-s "$width"x"$height")
-  ffmpeg+=(-i ":0.0+$x,$y")
-  ffmpeg+=(-preset ultrafast)
-  ffmpeg+=(-crf 0)
+function adjust_gif_fps() {
+  if [ $FRAMERATE -gt 100 ]; then
+    log_warning "framerate '$FRAMERATE' is larger than the maximum, using 100 instead."
+    FRAMERATE=100
+  else
+    FRAMERATE=$(bc -l <<< "100/$(printf "%.0f" $(bc -l <<< "100/$FRAMERATE"))")
+  fi
+}
+
+function record() {
+
+  #-f pulse -i 1 -f pulse -i default -filter_complex amerge -ac 2
+  ffmpeg=(ffmpeg -f x11grab -s "$width"x"$height" -i ":0.0+$x,$y")
+
+  # record audio
+  if [ "$AUDIO" = 1 ]; then
+    ffmpeg+=(-f pulse -i 1)
+  fi
+
+  # if record microphone
+  if [ "$MICROPHONE" = 1 ]; then
+    ffmpeg+=(-f pulse -i default)
+  fi
+
+  # if both audio and microphone is recorded, merge the channels
+  if [ "$AUDIO" = 1 ] && [ "$MICROPHONE" = 1 ]; then
+    ffmpeg+=(-filter_complex amerge -ac 2)
+  fi
+
+
+  ffmpeg+=(-vf "crop=trunc(iw/2)*2:trunc(ih/2)*2")
 
   [ "$VERBOSITY" -lt "3" ] && ffmpeg+=(-loglevel "quiet")
   [ -n "$TIMER" ] && [ "$TIMER" -gt 0 ] && ffmpeg+=(-t "$TIMER")
 
-  ffmpeg+=("$TEMP_DIRECTORY/recording.mkv")
+  ffmpeg+=(-r $FRAMERATE)
+
+  case "$FORMAT" in
+    mp4|mkv)
+      ffmpeg+=(-pix_fmt yuv420p)
+      ffmpeg+=(-crf 15)
+      ffmpeg+=("$TEMP_DIRECTORY/final.$FORMAT")
+      ;;
+    gif|webm|*) # raw/lossless for gif/webm because they get encoded separately
+      ffmpeg+=(-preset veryslow)
+      ffmpeg+=(-crf 0)
+      ffmpeg+=("$TEMP_DIRECTORY/lossless.mp4")
+      ;;
+  esac
 
   [ -n "$DELAY" ] && [ "$DELAY" -gt 0 ] && countdown_cli "$DELAY" "recording starts in"
 
   ffmpeg_command=${ffmpeg[*]}
   log "ffmpeg command: '$ffmpeg_command'" 2 true
-  
+
   "${ffmpeg[@]}" &
   FFMPEG_PID=$!
 
@@ -348,23 +402,15 @@ function countdown_cli() {
   done
 }
 
-
 function stop_recording_handler_cli() {
   log_info "stop recording with \033[1;36mctrl+c\033[0m or call \033[1;36mgiph --stop\033[0m"
   trap '' INT
 }
 
-
 function encode_gif_ffmpeg() {
   log "encoding gif using ffmpeg encoder" 1 true
-  ffmpeg_generate_palette=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -vf palettegen "$TEMP_DIRECTORY/palette.png")
-  [ "$VERBOSITY" -lt "3" ] && ffmpeg_generate_palette+=(-loglevel "quiet")
-  
-  log "generating color palette from recording" 2 true
-  "${ffmpeg_generate_palette[@]}"
-  [ $? = 1 ] && log_error "could not generate color palette from video"
-  
-  ffmpeg_encode_gif=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -i "$TEMP_DIRECTORY/palette.png" -filter_complex paletteuse -r "$FRAMERATE" "$TEMP_DIRECTORY/encoded.gif")
+
+  ffmpeg_encode_gif=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -vf "fps=$FRAMERATE,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 -framerate "$FRAMERATE" "$TEMP_DIRECTORY/encoded.gif")
   [ "$VERBOSITY" -lt "3" ] && ffmpeg_encode_gif+=(-loglevel "quiet")
   
   log "encoding gif using recorded video and generated palette" 2 true
@@ -372,13 +418,13 @@ function encode_gif_ffmpeg() {
   [ $? = 1 ] && log_error "could not encode gif from video and color palette"
 }
 
-function deliver_final_gif() {
+function deliver() {
   if [ -n "$OUTPUT_FILE" ]; then
-    mv "$TEMP_DIRECTORY/encoded.gif" "$OUTPUT_FILE" && {
-      log_success "final gif saved as \"$OUTPUT_FILE\""
+    mv "$1" "$OUTPUT_FILE" && {
+      log_success "final $FORMAT saved as \"$OUTPUT_FILE\""
     }
   else
-    cat "$TEMP_DIRECTORY/encoded.gif"
+    cat "$1"
   fi
 }
 
@@ -388,12 +434,40 @@ function delete_temporary_directory() {
   log "deleted temporary directory $TEMP_DIRECTORY" 2 true
 }
 
+# TODO: add proper logs for different log levels
+function encode() {
+
+  ffmpeg_encode=(ffmpeg -i "$TEMP_DIRECTORY/lossless.mp4")
+
+  case "$FORMAT" in
+    "gif")
+      ffmpeg_encode+=(-vf "split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse")
+      ;;
+    "webm")
+      ffmpeg_encode+=(-c:v libvpx-vp9)
+      #ffmpeg_encode+=(-crf 15) # webm can have a crf between 0 and 63
+      ;;
+  esac
+
+  [ "$VERBOSITY" -lt "3" ] && ffmpeg_encode+=(-loglevel "quiet")
+
+  ffmpeg_encode+=("$TEMP_DIRECTORY/final.$FORMAT")
+
+  "${ffmpeg_encode[@]}"
+  [ $? = 1 ] && log_error "could not encode gif from video and color palette"
+}
+
 function giph() {
   get_geometry
   create_temporary_directory
-  start_video_recording
-  encode_gif_ffmpeg
-  deliver_final_gif
+  record
+
+  if [[ "$FORMAT" == "gif" || "$FORMAT" == "webm" ]]; then
+    encode
+  fi
+
+  deliver "$TEMP_DIRECTORY/final.$FORMAT"
+
   delete_temporary_directory
   exit 0
 }
