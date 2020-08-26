@@ -33,22 +33,22 @@ DESCRIPTION
   When omitting [FILENAME], the default format "gif" is uded (use --format to overwrite), and the resulting video directly printed to standard output.
 
 OPTIONS
-  -h,  --help                 Print help and exit.
-       --version              Print version and exit.
-  -v*, --verbose, --quiet     Set the verbosity.
-  -s,  --select               Enable slop selection.
-  -g,  --geometry=STRING      Record rectangle by geometry. (like 100x300+0+0)
-  -w,  --window=INT           Record window by id.
-  -d,  --delay=INT            Time in seconds before the recording starts.
-  -t,  --timer=TIMEDURATION   Time of the recording. (e.g. 10 for 10 seconds or 1:30 for 1 minute 30 seconds)
-  -f,  --framerate=INT        Set the framerate.
-       --format               Set the wanted output format. This overwrites the autodetection.
-  -a,  --audio                Enable audio recording.
-  -as, --audio-source         Overwrite the default audio source.
-  -m,  --microphone           Enable microphone recording.
-  -ms, --microphone-source    Overwrite the default microphone source.
-  -y,  --notify               Send notification on error or success.
-       --stop                 Finish any running giph recordings.
+  -h,  --help                       Print help and exit.
+       --version                    Print version and exit.
+  -v*, --verbose, --quiet           Set the verbosity.
+  -s,  --select                     Enable slop selection.
+  -g,  --geometry=STRING            Record rectangle by geometry. (like 100x300+0+0)
+  -w,  --window=INT                 Record window by id.
+  -d,  --delay=INT                  Time in seconds before the recording starts.
+  -t,  --timer=TIMEDURATION         Time of the recording. (e.g. 10 for 10 seconds or 1:30 for 1 minute 30 seconds)
+  -f,  --framerate=INT              Set the framerate.
+       --format                     Set the wanted output format. This overwrites the autodetection.
+  -a,  --audio                      Enable audio recording.
+  -as, --audio-source=STRING        Overwrite the default audio source.
+  -m,  --microphone                 Enable microphone recording.
+  -ms, --microphone-source=STRING   Overwrite the default microphone source.
+  -y,  --notify                     Send notification on error or success.
+       --stop                       Finish any running giph recordings.
 
 SLOP OPTIONS
   -b, --bordersize=FLOAT                Set the selection border thickness.
