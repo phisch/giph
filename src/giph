@@ -9,10 +9,13 @@ VERBOSITY=0
 
 # options
 SLOP=0
-AUDIO=0
-MICROPHONE=0
 DELAY=0
-FRAMERATE=15
+FRAMERATE=20
+AUDIO=0
+AUDIO_SOURCE=0
+MICROPHONE=0
+MICROPHONE_SOURCE=default
+FORMAT_OVERWRITE=""
 
 function print_version() {
   echo $VERSION
@@ -25,8 +28,9 @@ SYNOPSIS
     giph [OPTIONS] [FILENAME]
 
 DESCRIPTION
-  giph is a screen recorder that records the desktop, a window or selection and encodes it into a gif file.
-  It prints the encoded gif directly to standard output when omitting [FILENAME].
+  giph is a screen recorder that records the desktop, a window or selection and encodes it into a video file.
+  The recorded video file is encoded in one of the supported formats, gif, webm, mp4 or mkv based on the file extension given in [FILENAME].
+  When omitting [FILENAME], the default format "gif" is uded (use --format to overwrite), and the resulting video directly printed to standard output.
 
 OPTIONS
   -h,  --help                 Print help and exit.
@@ -38,6 +42,11 @@ OPTIONS
   -d,  --delay=INT            Time in seconds before the recording starts.
   -t,  --timer=TIMEDURATION   Time of the recording. (e.g. 10 for 10 seconds or 1:30 for 1 minute 30 seconds)
   -f,  --framerate=INT        Set the framerate.
+       --format               Set the wanted output format. This overwrites the autodetection.
+  -a,  --audio                Enable audio recording.
+  -as, --audio-source         Overwrite the default audio source.
+  -m,  --microphone           Enable microphone recording.
+  -ms, --microphone-source    Overwrite the default microphone source.
   -y,  --notify               Send notification on error or success.
        --stop                 Finish any running giph recordings.
 
@@ -145,13 +154,24 @@ while [[ "$1" == -* ]]; do
     FRAMERATE="$1"
     ;;
   --format)
-    #TODO: implement hard overwrite
+    shift
+    FORMAT_OVERWRITE="$1"
     ;;
   -a|--audio)
     AUDIO=1
     ;;
+  -as|--audio-source)
+    shift
+    AUDIO=1
+    AUDIO_SOURCE="$1"
+    ;;
   -m|--microphone)
     MICROPHONE=1
+    ;;
+  -ms|--microphone-source)
+    shift
+    MICROPHONE=1
+    MICROPHONE_SOURCE="$1"
     ;;
   -y|--notify)
     NOTIFY=1
@@ -205,6 +225,13 @@ case "$OUTPUT_FILE" in
     *.mkv)  FORMAT="mkv" ;;
     *)      FORMAT="gif" ;;
 esac
+
+if [ -n "$FORMAT_OVERWRITE" ]; then
+  case "$FORMAT_OVERWRITE" in
+    webm|mp4|mkv|gif) FORMAT="$FORMAT_OVERWRITE";;
+    *) log_error "'$FORMAT_OVERWRITE' is not a supported format."
+  esac
+fi
 
 function get_geometry() {
   if [ $SLOP = 1 ]; then
@@ -327,25 +354,13 @@ function adjust_gif_fps() {
 }
 
 function record() {
-
-  #-f pulse -i 1 -f pulse -i default -filter_complex amerge -ac 2
   ffmpeg=(ffmpeg -f x11grab -s "$width"x"$height" -i ":0.0+$x,$y")
 
-  # record audio
-  if [ "$AUDIO" = 1 ]; then
-    ffmpeg+=(-f pulse -i 1)
+  if [ "$FORMAT" != "gif" ]; then
+    [ "$AUDIO" = 1 ] && ffmpeg+=(-f pulse -i "$AUDIO_SOURCE")
+    [ "$MICROPHONE" = 1 ] && ffmpeg+=(-f pulse -i "$MICROPHONE_SOURCE")
+    [ "$AUDIO" = 1 ] && [ "$MICROPHONE" = 1 ] && ffmpeg+=(-filter_complex amerge -ac 2)
   fi
-
-  # if record microphone
-  if [ "$MICROPHONE" = 1 ]; then
-    ffmpeg+=(-f pulse -i default)
-  fi
-
-  # if both audio and microphone is recorded, merge the channels
-  if [ "$AUDIO" = 1 ] && [ "$MICROPHONE" = 1 ]; then
-    ffmpeg+=(-filter_complex amerge -ac 2)
-  fi
-
 
   ffmpeg+=(-vf "crop=trunc(iw/2)*2:trunc(ih/2)*2")
 
@@ -360,7 +375,7 @@ function record() {
       ffmpeg+=(-crf 15)
       ffmpeg+=("$TEMP_DIRECTORY/final.$FORMAT")
       ;;
-    gif|webm|*) # raw/lossless for gif/webm because they get encoded separately
+    gif|webm|*)
       ffmpeg+=(-preset veryslow)
       ffmpeg+=(-crf 0)
       ffmpeg+=("$TEMP_DIRECTORY/lossless.mp4")
@@ -407,15 +422,29 @@ function stop_recording_handler_cli() {
   trap '' INT
 }
 
-function encode_gif_ffmpeg() {
-  log "encoding gif using ffmpeg encoder" 1 true
+function encode() {
+  log "encoding $FORMAT using ffmpeg" 1 true
 
-  ffmpeg_encode_gif=(ffmpeg -i "$TEMP_DIRECTORY/recording.mkv" -vf "fps=$FRAMERATE,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 -framerate "$FRAMERATE" "$TEMP_DIRECTORY/encoded.gif")
-  [ "$VERBOSITY" -lt "3" ] && ffmpeg_encode_gif+=(-loglevel "quiet")
-  
-  log "encoding gif using recorded video and generated palette" 2 true
-  "${ffmpeg_encode_gif[@]}"
-  [ $? = 1 ] && log_error "could not encode gif from video and color palette"
+  ffmpeg_encode=(ffmpeg -i "$TEMP_DIRECTORY/lossless.mp4")
+
+  case "$FORMAT" in
+    "gif")
+      ffmpeg_encode+=(-vf "split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse")
+      ;;
+    "webm")
+      ffmpeg_encode+=(-c:v libvpx-vp9)
+      ;;
+  esac
+
+  [ "$VERBOSITY" -lt "3" ] && ffmpeg_encode+=(-loglevel "quiet")
+
+  ffmpeg_encode+=("$TEMP_DIRECTORY/final.$FORMAT")
+
+  ffmpeg_encode_command=${ffmpeg_encode[*]}
+  log "ffmpeg encode command: '$ffmpeg_encode_command'" 2 true
+
+  "${ffmpeg_encode[@]}"
+  [ $? = 1 ] && log_error "could not encode $FORMAT from lossless recording"
 }
 
 function deliver() {
@@ -432,29 +461,6 @@ function delete_temporary_directory() {
   rm -r "$TEMP_DIRECTORY"
   [ $? = 1 ] && log_error "could not delete temporary directory"
   log "deleted temporary directory $TEMP_DIRECTORY" 2 true
-}
-
-# TODO: add proper logs for different log levels
-function encode() {
-
-  ffmpeg_encode=(ffmpeg -i "$TEMP_DIRECTORY/lossless.mp4")
-
-  case "$FORMAT" in
-    "gif")
-      ffmpeg_encode+=(-vf "split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse")
-      ;;
-    "webm")
-      ffmpeg_encode+=(-c:v libvpx-vp9)
-      #ffmpeg_encode+=(-crf 15) # webm can have a crf between 0 and 63
-      ;;
-  esac
-
-  [ "$VERBOSITY" -lt "3" ] && ffmpeg_encode+=(-loglevel "quiet")
-
-  ffmpeg_encode+=("$TEMP_DIRECTORY/final.$FORMAT")
-
-  "${ffmpeg_encode[@]}"
-  [ $? = 1 ] && log_error "could not encode gif from video and color palette"
 }
 
 function giph() {

@@ -15,7 +15,11 @@ giph \- record gif from desktop, window or selection
 [\fIFILENAME\fR]
 .SH DESCRIPTION
 .B giph
-is a screen recorder that records the desktop, a window or selection and encodes it into a gif file. It prints the encoded gif directly to standard output when omitting [\fIFILENAME\fR].
+is a screen recorder that records the desktop, a window or selection and encodes it into a video file.
+.br
+The recorded video file is encoded in one of the supported formats, gif, webm, mp4 or mkv based on the file extension given in [\fIFILENAME\fR].
+.br
+When omitting [\fIFILENAME\fR], the default format "gif" is used (use --format to overwrite), and the resulting video directly printed to standard output.
 .SH EXAMPLES
 .TP
 .BI "giph -g " "300x200+600+200 ~/Videos/$(date +%s).png"
@@ -73,6 +77,25 @@ Sets a fixed time to record. The format is a timeduration as described in the ff
 .TP
 .BR \-f ", " \-\-framerate " \fIINT\fR (default: \fI15\fR)"
 Sets the desired framerate of the recorded gif. A higher framerate will result in a larger filesize.
+.TP
+.BR \-\-format
+Overwrites the format that should be used for the recording. The available formats are
+.IR gif ", " webm ", " mp4 " and " mkv "."
+While
+.IR gif
+is the only format that does not support audio recording.
+.TP
+.BR \-a ", " \-\-audio
+Enables audio recording for formats that support audio.
+.TP
+.BR \-as ", " \-\-audio-source " \fISTRING\fR (default: '\fI0\fR')"
+Define which pulseaudio source should be used for the recording. Run `pacmd list-sources` to get a list of all available sources. You can use either the index or the name of the source for this parameter.
+.TP
+.BR \-m ", " \-\-microphone
+Enables microphone recording for formats that support audio.
+.TP
+.BR \-ms ", " \-\-microphone-source " \fISTRING\fR (default: '\fIdefault\fR')"
+Define which pulseaudio source should be used for the recording. Run `pacmd list-sources` to get a list of all available sources. You can use either the index or the name of the source for this parameter.
 .TP
 .BR \-y ", " \-\-notify
 Uses notify-send to send an urgent notification if an error happens, or a normal notification when the final gif was saved successfully.
