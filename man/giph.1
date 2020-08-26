@@ -12,6 +12,9 @@ giph \- record gif from desktop, window or selection
 [\fB-d\fR \fIINT\fR]
 [\fB-t\fR \fIINT\fR]
 [\fB-f\fR \fIINT\fR]
+[\fB--format\fR \fISTRING\fR]
+[\fB-a\fR | \fB -as \fISTRING\fR]
+[\fB-m\fR | \fB -ms \fISTRING\fR]
 [\fIFILENAME\fR]
 .SH DESCRIPTION
 .B giph
@@ -75,7 +78,7 @@ Sets the time in seconds to wait before the recording starts.
 .BR \-t ", " \-\-timer " " \fITIMEDURATION
 Sets a fixed time to record. The format is a timeduration as described in the ffmpeg documentation (https://ffmpeg.org/ffmpeg-utils.html#Time-duration). As an example, '10' would mean 10 seconds, '3:30' means 3 minutes and 30 seconds, '1:02:03' means 1 hour, 2 minutes and 3 seconds, and '5.5' means 5.5 seconds.
 .TP
-.BR \-f ", " \-\-framerate " \fIINT\fR (default: \fI15\fR)"
+.BR \-f ", " \-\-framerate " \fIINT\fR (default: \fI20\fR)"
 Sets the desired framerate of the recorded gif. A higher framerate will result in a larger filesize.
 .TP
 .BR \-\-format
@@ -89,13 +92,17 @@ is the only format that does not support audio recording.
 Enables audio recording for formats that support audio.
 .TP
 .BR \-as ", " \-\-audio-source " \fISTRING\fR (default: '\fI0\fR')"
-Define which pulseaudio source should be used for the recording. Run `pacmd list-sources` to get a list of all available sources. You can use either the index or the name of the source for this parameter.
+Define which pulseaudio source should be used for the recording. Run `pacmd list-sources` to get a list of all available sources. You can use either the index or the name of the source for this parameter. When setting this parameter, setting
+.BR \-a " or " \-\-audio
+can be omitted.
 .TP
 .BR \-m ", " \-\-microphone
 Enables microphone recording for formats that support audio.
 .TP
 .BR \-ms ", " \-\-microphone-source " \fISTRING\fR (default: '\fIdefault\fR')"
-Define which pulseaudio source should be used for the recording. Run `pacmd list-sources` to get a list of all available sources. You can use either the index or the name of the source for this parameter.
+Define which pulseaudio source should be used for the recording. Run `pacmd list-sources` to get a list of all available sources. You can use either the index or the name of the source for this parameter. When setting this parameter, setting
+.BR \-m " or " \-\-microphone
+can be omitted.
 .TP
 .BR \-y ", " \-\-notify
 Uses notify-send to send an urgent notification if an error happens, or a normal notification when the final gif was saved successfully.
