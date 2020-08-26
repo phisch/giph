@@ -344,15 +344,6 @@ function create_temporary_directory() {
   log "created temporary directory $TEMP_DIRECTORY" 2 true
 }
 
-function adjust_gif_fps() {
-  if [ $FRAMERATE -gt 100 ]; then
-    log_warning "framerate '$FRAMERATE' is larger than the maximum, using 100 instead."
-    FRAMERATE=100
-  else
-    FRAMERATE=$(bc -l <<< "100/$(printf "%.0f" $(bc -l <<< "100/$FRAMERATE"))")
-  fi
-}
-
 function record() {
   ffmpeg=(ffmpeg -f x11grab -s "$width"x"$height" -i ":0.0+$x,$y")
 
