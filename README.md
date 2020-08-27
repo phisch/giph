@@ -3,8 +3,7 @@ giph is a screen recorder that records the desktop, a window or selection and en
 
 ![demo](https://i.imgur.com/Hoi0fF7.gif)
 
-*I used **giph** to record a gif of **giph** recording a gif*.  
-Command used in this demo: `giph -s -l -c 0.3,0,0.6,0.3 ~/Videos/$(date +%s).gif`
+*I used **giph** to record a gif of **giph** recording a gif*.
 
 ## Examples
 
