@@ -20,6 +20,18 @@ $ giph -g 100x200+0+0 -d 5 -t 10
 ```
 Records a 100x200 pixel rectangle in the top left corner of the screen. The recording starts after a 5 seconds countdown and will record for exactly 10 seconds. The resulting gif will be printed to standard output, which makes this able to be piped into other scripts like a file-upload to an image hosting service.
 
+
+```bash
+$ giph -f 30 -t 5 -s -a -m out.webm
+```
+Records a 5 second video of the users selection at 30 fps. The recording also contains the users desktop audio and microphone. If the recording fails because the default audio source `0` is not the correct one, run `pacmd list-sources` to get the correct source `index` or `name` and pass it to the `-as` parameter instead of using `-a`. Example: `giph -f 30 -t 5 -s -as 1 -m out.webm` (using id) or `giph -f 30 -t 5 -s -as alsa_output.pci-0000_04_00.1.hdmi-stereo.monitor -m out.webm` (using name)
+
+```bash
+$ giph -s -t 10 --format webm | curl -F "file=@-" 0x0.st | xclip -selection clipboard
+```
+
+Records a 10 second webm of the users selection, uploads the video to 0x0.st using curl and copies the returned url to the clipboard.
+
 ## Installation
 
 ### Arch
