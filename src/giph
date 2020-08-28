@@ -345,7 +345,7 @@ function create_temporary_directory() {
 }
 
 function record() {
-  ffmpeg=(ffmpeg -f x11grab -s "$width"x"$height" -i ":0.0+$x,$y")
+  ffmpeg=(ffmpeg -f x11grab -s "$width"x"$height" -i "$DISPLAY.0+$x,$y")
 
   if [ "$FORMAT" != "gif" ]; then
     [ "$AUDIO" = 1 ] && ffmpeg+=(-f pulse -i "$AUDIO_SOURCE")
