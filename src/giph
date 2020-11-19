@@ -18,7 +18,7 @@ MICROPHONE_SOURCE=default
 FORMAT_OVERWRITE=""
 
 function print_version() {
-  echo $VERSION
+  echo "$VERSION"
   exit 0
 }
 
@@ -266,7 +266,7 @@ function get_geometry_from_slop() {
   [ -n "$SLOP_NOOPENGL" ] && slop+=(-o)
   [ "$VERBOSITY" -lt "3" ] && slop+=(-q)
 
-  slop_command=${slop[*]}
+  slop_command="${slop[*]}"
   log "slop command: '$slop_command'" 2 true
 
   slop_value="$("$slop_command")"
@@ -389,14 +389,14 @@ function record() {
     stop_recording_handler_cli
   fi
 
-  wait $FFMPEG_PID
+  wait "$FFMPEG_PID"
 
-  [ $? = 1 ] && log_error "recording video with ffmpeg failed"
+  [ "$?" = 1 ] && log_error "recording video with ffmpeg failed"
   log "completed ffmpeg video recording" 1 true
 }
 
 function countdown_cli() {
-  seconds=$1
+  seconds="$1"
   while [ "$seconds" -ge 0 ]; do
     log "\r\033[K\033[0;36m$2:\033[0m $seconds" 0 false false true
     if [ "$seconds" -gt 0 ]; then
@@ -404,7 +404,7 @@ function countdown_cli() {
     else
       log "\r\033[K" 0 false false true
     fi
-    : $((seconds--))
+    : "$((seconds--))"
   done
 }
 
@@ -470,7 +470,7 @@ function giph() {
 }
 
 function stop_all_recordings() {
-  for pid in $(pgrep -f "bash.+giph"); do
+  for pid in "$(pgrep -f "bash.+giph")"; do
     kill -INT -"$pid"
   done
 }
