@@ -2,7 +2,7 @@
 
 stty -echoctl # don't print ^C when pressing ctrl+c
 
-readonly VERSION=1.0
+readonly VERSION=1.1.1
 
 # verbosity
 VERBOSITY=0
