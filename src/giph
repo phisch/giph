@@ -269,7 +269,7 @@ function get_geometry_from_slop() {
   slop_command="${slop[*]}"
   log "slop command: '$slop_command'" 2 true
 
-  slop_value="$("$slop_command")"
+  slop_value="$($slop_command)"
   [ "$?" -eq 1 ] && log_error "slop selection got canceled"
 
   GEOMETRY_STRING="$slop_value"
@@ -471,7 +471,7 @@ function giph() {
 
 function stop_all_recordings() {
   for pid in "$(pgrep -f "bash.+giph")"; do
-    kill -INT -"$pid"
+    kill -INT -$pid
   done
 }
 
