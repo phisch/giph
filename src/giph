@@ -328,11 +328,11 @@ function parse_geometry_string() {
   }
 
   [ "$((x+width))" -gt "$WIDTH" ] && {
-    width-="$((x + width - WIDTH))"
+      ((width-="$((x + width - WIDTH))"))
   }
 
   [ "$((y+height))" -gt "$HEIGHT" ] && {
-    height-="$((y + height - HEIGHT))"
+      ((height-="$((y + height - HEIGHT))"))
   }
 
   log "parsed geometry: width=$width, height=$height, x=$x, y=$y" 2 true
