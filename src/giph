@@ -217,7 +217,7 @@ while [[ "$1" == -* ]]; do
 done
 
 # set verbosity to -1 if the file should be printed to stdout
-[ -n "$1" ] && OUTPUT_FILE=$1 || VERBOSITY=-1
+[ -n "$1" ] && OUTPUT_FILE="$1" || VERBOSITY=-1
 
 case "$OUTPUT_FILE" in
     *.webm) FORMAT="webm" ;;
@@ -234,7 +234,7 @@ if [ -n "$FORMAT_OVERWRITE" ]; then
 fi
 
 function get_geometry() {
-  if [ $SLOP = 1 ]; then
+  if [ "$SLOP" = 1 ]; then
     log "using slop to determine recording geometry" 1 true
     get_geometry_from_slop
   elif [ -n "$GEOMETRY" ]; then
@@ -269,43 +269,43 @@ function get_geometry_from_slop() {
   slop_command=${slop[*]}
   log "slop command: '$slop_command'" 2 true
 
-  slop_value=$($slop_command)
+  slop_value="$("$slop_command")"
   [ "$?" -eq 1 ] && log_error "slop selection got canceled"
 
-  GEOMETRY_STRING=$slop_value
+  GEOMETRY_STRING="$slop_value"
 }
 
 function get_geometry_from_string() {
-  GEOMETRY_STRING=$GEOMETRY
+  GEOMETRY_STRING="$GEOMETRY"
 }
 
 function get_geometry_from_window_id() {
-  xdotool_output=$(xdotool getwindowgeometry --shell "$1" 2> /dev/null)
-  [ $? = 1 ] && log_error "window with id $1 does not exist"
+  xdotool_output="$(xdotool getwindowgeometry --shell "$1" 2> /dev/null)"
+  [ "$?" = 1 ] && log_error "window with id $1 does not exist"
 
   WIDTH=0
   HEIGHT=0
 
   eval "$xdotool_output"
 
-  [[ $X != "-"* ]] && X="+$X"
-  [[ $Y != "-"* ]] && Y="+$Y"
+  [[ "$X" != "-"* ]] && X="+$X"
+  [[ "$Y" != "-"* ]] && Y="+$Y"
 
   GEOMETRY_STRING="${WIDTH}x${HEIGHT}${X}${Y}"
 }
 
 function get_geometry_for_desktop() {
-  root_window_id=$(xdotool search --maxdepth 0 --class '')
+  root_window_id="$(xdotool search --maxdepth 0 --class '')"
   get_geometry_from_window_id "$root_window_id"
 }
 
 function parse_geometry_string() {
-  [[ $GEOMETRY_STRING =~ ([0-9]+)x([0-9]+)[+]?([-]?[0-9]+)[+]?([-]?[0-9]+) ]] 
+  [[ "$GEOMETRY_STRING" =~ ([0-9]+)x([0-9]+)[+]?([-]?[0-9]+)[+]?([-]?[0-9]+) ]]
 
-  width=${BASH_REMATCH[1]}
-  height=${BASH_REMATCH[2]}
-  x=${BASH_REMATCH[3]}
-  y=${BASH_REMATCH[4]}
+  width="${BASH_REMATCH[1]}"
+  height="${BASH_REMATCH[2]}"
+  x="${BASH_REMATCH[3]}"
+  y="${BASH_REMATCH[4]}"
 
   [ -z "$width" ] || [ -z "$height" ] || [ -z "$x" ] || [ -z "$y" ] && {
     log_error "could not parse geometry string '$GEOMETRY_STRING'"
@@ -313,34 +313,34 @@ function parse_geometry_string() {
 
   get_geometry_for_desktop
 
-  [ "$x" -gt "$WIDTH" ] || [ $((x + width)) -lt 0 ] || [ "$y" -gt "$HEIGHT" ] || [ $((y + height)) -lt 0  ] && {
+  [ "$x" -gt "$WIDTH" ] || [ "$((x + width))" -lt 0 ] || [ "$y" -gt "$HEIGHT" ] || [ "$((y + height))" -lt 0  ] && {
     log_error "the area to record is fully outside of the root window"
   }
 
   [ "$x" -lt 0 ] && {
-    width=$((width + x))
+    width="$((width + x))"
     x="0"
   }
-  
+
   [ "$y" -lt 0 ] && {
-    height=$((height + y))
+    height="$((height + y))"
     y="0"
   }
 
-  [ $((x+width)) -gt "$WIDTH" ] && {
-    width-=$((x + width - WIDTH))
+  [ "$((x+width))" -gt "$WIDTH" ] && {
+    width-="$((x + width - WIDTH))"
   }
 
-  [ $((y+height)) -gt "$HEIGHT" ] && {
-    height-=$((y + height - HEIGHT))
+  [ "$((y+height))" -gt "$HEIGHT" ] && {
+    height-="$((y + height - HEIGHT))"
   }
 
   log "parsed geometry: width=$width, height=$height, x=$x, y=$y" 2 true
 }
 
 function create_temporary_directory() {
-  TEMP_DIRECTORY=$(mktemp -d)
-  [ $? = 1 ] && log_error "could not create temporary directory"
+  TEMP_DIRECTORY="$(mktemp -d)"
+  [ "$?" = 1 ] && log_error "could not create temporary directory"
   log "created temporary directory $TEMP_DIRECTORY" 2 true
 }
 
@@ -358,7 +358,7 @@ function record() {
   [ "$VERBOSITY" -lt "3" ] && ffmpeg+=(-loglevel "quiet")
   [ -n "$TIMER" ] && [ "$TIMER" -gt 0 ] && ffmpeg+=(-t "$TIMER")
 
-  ffmpeg+=(-r $FRAMERATE)
+  ffmpeg+=(-r "$FRAMERATE")
 
   case "$FORMAT" in
     mp4|mkv)
@@ -375,11 +375,11 @@ function record() {
 
   [ -n "$DELAY" ] && [ "$DELAY" -gt 0 ] && countdown_cli "$DELAY" "recording starts in"
 
-  ffmpeg_command=${ffmpeg[*]}
+  ffmpeg_command="${ffmpeg[*]}"
   log "ffmpeg command: '$ffmpeg_command'" 2 true
 
   "${ffmpeg[@]}" &
-  FFMPEG_PID=$!
+  FFMPEG_PID="$!"
 
   log "started recording video with ffmpeg" 1 true
 
@@ -401,7 +401,7 @@ function countdown_cli() {
     log "\r\033[K\033[0;36m$2:\033[0m $seconds" 0 false false true
     if [ "$seconds" -gt 0 ]; then
       sleep 1
-    else 
+    else
       log "\r\033[K" 0 false false true
     fi
     : $((seconds--))
@@ -431,11 +431,11 @@ function encode() {
 
   ffmpeg_encode+=("$TEMP_DIRECTORY/final.$FORMAT")
 
-  ffmpeg_encode_command=${ffmpeg_encode[*]}
+  ffmpeg_encode_command="${ffmpeg_encode[*]}"
   log "ffmpeg encode command: '$ffmpeg_encode_command'" 2 true
 
   "${ffmpeg_encode[@]}"
-  [ $? = 1 ] && log_error "could not encode $FORMAT from lossless recording"
+  [ "$?" = 1 ] && log_error "could not encode $FORMAT from lossless recording"
 }
 
 function deliver() {
@@ -450,7 +450,7 @@ function deliver() {
 
 function delete_temporary_directory() {
   rm -r "$TEMP_DIRECTORY"
-  [ $? = 1 ] && log_error "could not delete temporary directory"
+  [ "$?" = 1 ] && log_error "could not delete temporary directory"
   log "deleted temporary directory $TEMP_DIRECTORY" 2 true
 }
 
@@ -470,7 +470,7 @@ function giph() {
 }
 
 function stop_all_recordings() {
-  for pid in $(pgrep giph); do
+  for pid in $(pgrep -f "bash.+giph"); do
     kill -INT -"$pid"
   done
 }
@@ -480,4 +480,5 @@ if [ -n "$SHOULD_STOP" ]; then
 else
   giph
 fi
+
 wait
