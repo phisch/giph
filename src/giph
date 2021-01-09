@@ -30,7 +30,7 @@ SYNOPSIS
 DESCRIPTION
   giph is a screen recorder that records the desktop, a window or selection and encodes it into a video file.
   The recorded video file is encoded in one of the supported formats, gif, webm, mp4 or mkv based on the file extension given in [FILENAME].
-  When omitting [FILENAME], the default format "gif" is uded (use --format to overwrite), and the resulting video directly printed to standard output.
+  When omitting [FILENAME], the default format "gif" is used (use --format to overwrite), and the resulting video directly printed to standard output.
 
 OPTIONS
   -h,  --help                       Print help and exit.
