@@ -17,6 +17,9 @@ MICROPHONE=0
 MICROPHONE_SOURCE=default
 FORMAT_OVERWRITE=""
 
+# last notification id
+LAST_NOTIFICATION_ID=0
+
 function print_version() {
   echo "$VERSION"
   exit 0
@@ -96,12 +99,33 @@ function log_info() {
   log "\033[0;36mINFO:\033[0m $1" 0 "${2:-true}"
 }
 
+# send a notification - (message:string, urgency:string, durationms:int)
 function notify() {
   [ "$NOTIFY" = 1 ] && {
-    notify=(notify-send -t 3000)
-    notify+=(-u "$2")
-    notify+=("giph" "$1")
-    "${notify[@]}"
+    case "$2" in
+        low) URGENCY=0 ;;
+        normal) URGENCY=1 ;;
+        critical) URGENCY=2 ;;
+    esac
+    LAST_NOTIFICATION_ID=$(gdbus call \
+      --session \
+      --dest=org.freedesktop.Notifications \
+      --object-path=/org/freedesktop/Notifications \
+      --method=org.freedesktop.Notifications.Notify \
+      "giph" "$LAST_NOTIFICATION_ID" "" "giph" "$1" \
+      '[]' '{"urgency": <'$URGENCY'>}' "${3:-5000}" | sed -E 's/^.* ([0-9]+).*$/\1/')
+  }
+}
+
+# closes the last notification
+function close_notification() {
+  [ "$NOTIFY" = 1 ] && {
+    gdbus call \
+      --session \
+      --dest org.freedesktop.Notifications \
+      --object-path /org/freedesktop/Notifications \
+      --method org.freedesktop.Notifications.CloseNotification "$LAST_NOTIFICATION_ID"
+    LAST_NOTIFICATION_ID=0
   }
 }
 
@@ -399,10 +423,12 @@ function countdown_cli() {
   seconds="$1"
   while [ "$seconds" -ge 0 ]; do
     log "\r\033[K\033[0;36m$2:\033[0m $seconds" 0 false false true
+    notify "$2 $seconds" "normal" 2000
     if [ "$seconds" -gt 0 ]; then
       sleep 1
     else
       log "\r\033[K" 0 false false true
+      close_notification
     fi
     : "$((seconds--))"
   done
