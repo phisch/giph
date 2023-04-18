@@ -471,7 +471,7 @@ function giph() {
 
 function stop_all_recordings() {
   for pid in $(pgrep -f "bash.+giph"); do
-    if [ "$pid" -eq $$ ]; then
+    if [ $pid -eq $$ ]; then
       continue
     fi
     record_pid=$(pgrep -P $pid -f "ffmpeg -f x11grab")
