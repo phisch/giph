@@ -2,6 +2,27 @@
 
 stty -echoctl # don't print ^C when pressing ctrl+c
 
+signal_usr1_handled=false
+function handle_usr1(){
+  # Ensure giph only receives SIGUSR1 ONCE
+  if [[ -n $FFMPEG_PID && "$signal_usr1_handled" == false ]]; then
+    signal_usr1_handled=true
+    kill $FFMPEG_PID
+    wait $FFMPEG_PID
+  fi
+}
+
+function handle_usr2(){
+  if [[ -n $FFMPEG_PID ]]; then
+    kill -KILL $FFMPEG_PID
+  fi
+  delete_temporary_directory
+  exit 1
+}
+
+trap handle_usr1 SIGUSR1
+trap handle_usr2 SIGUSR2
+
 readonly VERSION=1.1.1
 
 # verbosity
@@ -49,6 +70,7 @@ OPTIONS
   -ms, --microphone-source=STRING   Overwrite the default microphone source.
   -y,  --notify                     Send notification on error or success.
        --stop                       Finish any running giph recordings.
+       --kill                       Abort all giph recordings.
 
 SLOP OPTIONS
   -b, --bordersize=FLOAT                Set the selection border thickness.
@@ -129,6 +151,9 @@ while [[ "$1" == -* ]]; do
     ;;
   --stop)
     SHOULD_STOP=true
+    ;;
+  --kill)
+    SHOULD_KILL=true
     ;;
   -s|--select)
     SLOP=1
@@ -469,14 +494,24 @@ function giph() {
   exit 0
 }
 
+
 function stop_all_recordings() {
-  for pid in "$(pgrep -f "bash.+giph")"; do
-    kill -INT -$pid
+  for pid in $(pgrep -f "bash.+giph"); do
+    kill -USR1 $pid
+  done
+}
+
+
+function abort_all_recordings() {
+  for pid in $(pgrep -f "bash.+giph"); do
+    kill -USR2 $pid
   done
 }
 
 if [ -n "$SHOULD_STOP" ]; then
   stop_all_recordings
+elif [ -n "$SHOULD_KILL" ]; then
+  abort_all_recordings
 else
   giph
 fi
