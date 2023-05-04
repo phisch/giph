@@ -7,12 +7,21 @@ function handle_usr1(){
   # Ensure giph only receives SIGUSR1 ONCE
   if [[ -n $FFMPEG_PID && "$signal_usr1_handled" == false ]]; then
     signal_usr1_handled=true
-    kill $FFMPEG_PID 
+    kill $FFMPEG_PID
     wait $FFMPEG_PID
   fi
 }
 
+function handle_usr2(){
+  if [[ -n $FFMPEG_PID ]]; then
+    kill -KILL $FFMPEG_PID
+  fi
+  delete_temporary_directory
+  exit 1
+}
+
 trap handle_usr1 SIGUSR1
+trap handle_usr2 SIGUSR2
 
 readonly VERSION=1.1.1
 
@@ -493,9 +502,10 @@ function stop_all_recordings() {
 }
 
 
-# Todo
 function abort_all_recordings() {
-  :
+  for pid in $(pgrep -f "bash.+giph"); do
+    kill -USR2 $pid
+  done
 }
 
 if [ -n "$SHOULD_STOP" ]; then
