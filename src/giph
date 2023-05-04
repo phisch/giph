@@ -2,20 +2,13 @@
 
 stty -echoctl # don't print ^C when pressing ctrl+c
 
+signal_usr1_handled=false
 function handle_usr1(){
-  if [[ $FFMPEG_PID ]]; then
-    kill -int "$FFMPEG_PID"
-    FFMPEG_PID=""
-
-    wait
-
-    [ "$?" = 1 ] && log_error "recording video with ffmpeg failed"
-    log "completed ffmpeg video recording" 1 true
-
-    convert
-    wait
-
-    exit
+  # Ensure giph only receives SIGUSR1 ONCE
+  if [[ -n $FFMPEG_PID && "$signal_usr1_handled" == false ]]; then
+    signal_usr1_handled=true
+    kill $FFMPEG_PID 
+    wait $FFMPEG_PID
   fi
 }
 
@@ -68,7 +61,7 @@ OPTIONS
   -ms, --microphone-source=STRING   Overwrite the default microphone source.
   -y,  --notify                     Send notification on error or success.
        --stop                       Finish any running giph recordings.
-       --finish                     Finish any screen recordings only.
+       --kill                       Abort all giph recordings.
 
 SLOP OPTIONS
   -b, --bordersize=FLOAT                Set the selection border thickness.
@@ -150,8 +143,8 @@ while [[ "$1" == -* ]]; do
   --stop)
     SHOULD_STOP=true
     ;;
-  --finish)
-    SHOULD_FINISH=true
+  --kill)
+    SHOULD_KILL=true
     ;;
   -s|--select)
     SLOP=1
@@ -477,13 +470,11 @@ function delete_temporary_directory() {
   log "deleted temporary directory $TEMP_DIRECTORY" 2 true
 }
 
-function prepare() {
+function giph() {
   get_geometry
   create_temporary_directory
   record
-}
 
-function convert() {
   if [[ "$FORMAT" == "gif" || "$FORMAT" == "webm" ]]; then
     encode
   fi
@@ -492,37 +483,25 @@ function convert() {
 
   delete_temporary_directory
   exit 0
-
-}
-function giph() {
-  prepare
-  convert
 }
 
 
 function stop_all_recordings() {
   for pid in $(pgrep -f "bash.+giph"); do
-    if [ $pid -eq $$ ]; then
-      continue
-    fi
-    kill -INT -$pid
-  done
-}
-
-
-function stop_recording_only() {
-  for pid in $(pgrep -f "bash.+giph"); do
-    if [ "$pid" -eq $$ ]; then
-      continue
-    fi
     kill -USR1 $pid
   done
 }
 
+
+# Todo
+function abort_all_recordings() {
+  :
+}
+
 if [ -n "$SHOULD_STOP" ]; then
   stop_all_recordings
-elif [ -n "$SHOULD_FINISH" ]; then
-  stop_recording_only
+elif [ -n "$SHOULD_KILL" ]; then
+  abort_all_recordings
 else
   giph
 fi
